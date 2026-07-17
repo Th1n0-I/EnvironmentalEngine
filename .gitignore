@@ -1,0 +1,33 @@
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.VC.opendb
+
+## Build output
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ipch/
+
+## Build artifacts
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.idb
+*.tlog
+*.log
+
+## Compiled shaders
+*.cso
+
+## Graphics debugger captures
+*.rdc
+*.wpix
+
+## vcpkg
+vcpkg_installed/
