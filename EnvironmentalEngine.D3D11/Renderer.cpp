@@ -19,7 +19,7 @@ inline void Check(HRESULT hr)
 
 struct Vertex
 {
-    float x, y, z;
+    float x, y, z, r, g, b;
 };
 
 std::wstring ExeDir()
@@ -125,15 +125,15 @@ namespace EnvironmentalEngine{
 
 	void Renderer::EndFrame() 
     {
-		m_swapChain->Present(0, 0);
+		m_swapChain->Present(1, 0);
 	}
 
     void Renderer::CreateTriangle()
     {
         Vertex vertices[] = {
-            { 0.0f, 0.5f, 0.0f},
-            { 0.5f, -0.5f, 0.0f},
-            {-0.5f, -0.5f, 0.0f},
+            { 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
+            { 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
+            {-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f},
         };
 	    
 	    D3D11_BUFFER_DESC bd = {};
@@ -162,11 +162,12 @@ namespace EnvironmentalEngine{
 		));
 
 		D3D11_INPUT_ELEMENT_DESC layout[] = {
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 			
 		Check(m_device->CreateInputLayout(
-			layout, 1,
+			layout, 2,
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			&m_inputLayout
 		));
