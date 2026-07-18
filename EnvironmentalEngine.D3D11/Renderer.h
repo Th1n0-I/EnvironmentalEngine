@@ -26,13 +26,19 @@ namespace EnvironmentalEngine {
 	    void CreateTriangle();
 	    
 	    Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer> m_indexBuffer;
 	    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
 	    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
 	    Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_constantBuffer;
 
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthTex;
+		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthView;
+
 		float m_spinSpeed = 1.0f;
 		float m_fov = 60.0f;
+
+		UINT m_indexCount = 0;
 	};
 }

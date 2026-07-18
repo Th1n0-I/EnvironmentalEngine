@@ -78,11 +78,26 @@ namespace EnvironmentalEngine{
 		aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
 		m_rtv.Reset();
 
+		m_depthView.Reset();
+		m_depthTex.Reset();
+
 		Check(m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0));
 
 		ComPtr<ID3D11Texture2D> backBuffer;
 		Check(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
 		Check(m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_rtv));
+
+		D3D11_TEXTURE2D_DESC dd = {};
+		dd.Width = width;
+		dd.Height = height;
+		dd.MipLevels = 1;
+		dd.ArraySize = 1;
+		dd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dd.SampleDesc.Count = 1;
+		dd.Usage = D3D11_USAGE_DEFAULT;
+		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
+		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
 
 		D3D11_VIEWPORT vp = {};
 		vp.Width = static_cast<float>(width);
@@ -132,8 +147,21 @@ namespace EnvironmentalEngine{
 		vp.Height = static_cast<float>(height);
 		vp.MaxDepth = 1.0f;
 		m_context->RSSetViewports(1, &vp);
+
+		D3D11_TEXTURE2D_DESC dd = {};
+		dd.Width = width;
+		dd.Height = height;
+		dd.MipLevels = 1;
+		dd.ArraySize = 1;
+		dd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dd.SampleDesc.Count = 1;
+		dd.Usage = D3D11_USAGE_DEFAULT;
+		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
+		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
         
-	    CreateTriangle();
+	    CreateCube();
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -158,8 +186,9 @@ namespace EnvironmentalEngine{
 		}
 
 		const float clear[4] = { 0.39f, 0.58f, 0.93f, 1.0f };
-		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
+		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), m_depthView.Get());
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
+		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
@@ -205,12 +234,13 @@ namespace EnvironmentalEngine{
 
 		m_context->IASetInputLayout(m_inputLayout.Get());
 		m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
+		m_context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		m_context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
 		m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
-		m_context->Draw(3, 0);
+		m_context->DrawIndexed(m_indexCount, 0, 0);
 	}
 
 	void Renderer::EndFrame() 
@@ -220,13 +250,38 @@ namespace EnvironmentalEngine{
 		m_swapChain->Present(1, 0);
 	}
 
-    void Renderer::CreateTriangle()
+    void Renderer::CreateCube()
     {
-        Vertex vertices[] = {
-            { 0.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
-            { 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
-            {-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f},
-        };
+		Vertex vertices[] =
+		{//     x      y      z          r     g     b
+			{ -0.5f, -0.5f, -0.5f,		1.0f, 0.0f, 0.0f },
+			{  0.5f, -0.5f, -0.5f,		0.0f, 1.0f, 0.0f },
+			{  0.5f,  0.5f, -0.5f,		0.0f, 0.0f, 1.0f },
+			{ -0.5f,  0.5f, -0.5f,		1.0f, 1.0f, 0.0f },
+			{ -0.5f, -0.5f,  0.5f,		1.0f, 0.0f, 1.0f },
+			{  0.5f, -0.5f,  0.5f,		0.0f, 1.0f, 1.0f },
+			{  0.5f,  0.5f,  0.5f,		1.0f, 1.0f, 1.0f },
+			{ -0.5f,  0.5f,  0.5f,		0.2f, 0.2f, 0.2f },
+		};
+
+		unsigned int indices[] = {
+			0, 2, 1,	0, 3, 2,
+			4, 5, 6,	4, 6, 7,
+			4, 3, 0,	4, 7, 3,
+			1, 6, 5,	1, 2, 6,
+			3, 6, 2,	3, 7, 6,
+			4, 1, 5,	4, 0, 1
+		};
+
+		D3D11_BUFFER_DESC ibd = {};
+		ibd.ByteWidth = sizeof(indices);
+		ibd.Usage = D3D11_USAGE_DEFAULT;
+		ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+
+		D3D11_SUBRESOURCE_DATA iinit = {};
+		iinit.pSysMem = indices;
+
+		Check(m_device->CreateBuffer(&ibd, &iinit, &m_indexBuffer));
 	    
 	    D3D11_BUFFER_DESC bd = {};
 	    bd.ByteWidth = sizeof(vertices);
@@ -237,6 +292,8 @@ namespace EnvironmentalEngine{
 	    init.pSysMem = vertices;
 
 		Check(m_device->CreateBuffer(&bd, &init, &m_vertexBuffer));
+
+		m_indexCount = sizeof(indices) / sizeof(indices[0]);
 
 		D3D11_BUFFER_DESC cbd = {};
 		cbd.ByteWidth = sizeof(FrameConstants);
