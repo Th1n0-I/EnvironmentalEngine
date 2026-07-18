@@ -32,7 +32,7 @@ struct FrameConstants {
 
 struct Vertex
 {
-    float x, y, z, r, g, b;
+    float x, y, z, r, g, b, nx, ny, nz;
 };
 
 std::wstring ExeDir()
@@ -254,24 +254,41 @@ namespace EnvironmentalEngine{
     void Renderer::CreateCube()
     {
 		Vertex vertices[] =
-		{//     x      y      z          r     g     b
-			{ -0.5f, -0.5f, -0.5f,		1.0f, 0.0f, 0.0f },
-			{  0.5f, -0.5f, -0.5f,		0.0f, 1.0f, 0.0f },
-			{  0.5f,  0.5f, -0.5f,		0.0f, 0.0f, 1.0f },
-			{ -0.5f,  0.5f, -0.5f,		1.0f, 1.0f, 0.0f },
-			{ -0.5f, -0.5f,  0.5f,		1.0f, 0.0f, 1.0f },
-			{  0.5f, -0.5f,  0.5f,		0.0f, 1.0f, 1.0f },
-			{  0.5f,  0.5f,  0.5f,		1.0f, 1.0f, 1.0f },
-			{ -0.5f,  0.5f,  0.5f,		0.2f, 0.2f, 0.2f },
+		{//     x      y      z          r     g     b          nx     ny     nz
+			{ -0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	  -1.0f,  0.0f,  0.0f }, //0
+			{ -0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f, 	   0.0f, -1.0f,  0.0f }, //1
+			{ -0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,      0.0f,  0.0f, -1.0f }, //2
+			{  0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //3
+			{  0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f, -1.0f,  0.0f }, //4
+			{  0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f, -1.0f }, //5
+			{  0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //6
+			{  0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //7
+			{  0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f, -1.0f }, //8
+			{ -0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	  -1.0f,  0.0f,  0.0f }, //9
+			{ -0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //10
+			{ -0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f, -1.0f }, //11
+			{ -0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,     -1.0f,  0.0f,  0.0f }, //12 
+			{ -0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f, -1.0f,  0.0f }, //13
+			{ -0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f,  1.0f }, //14
+			{  0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //15
+			{  0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f, -1.0f,  0.0f }, //16
+			{  0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f,  1.0f }, //17
+			{  0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //18
+			{  0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //19
+			{  0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,      0.0f,  0.0f,  1.0f }, //20
+			{ -0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,     -1.0f,  0.0f,  0.0f }, //21
+			{ -0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //22
+			{ -0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f,  1.0f }, //23
 		};
 
-		unsigned int indices[] = {
-			0, 2, 1,	0, 3, 2,
-			4, 5, 6,	4, 6, 7,
-			4, 3, 0,	4, 7, 3,
-			1, 6, 5,	1, 2, 6,
-			3, 6, 2,	3, 7, 6,
-			4, 1, 5,	4, 0, 1
+		unsigned int indices[] =
+		{
+			14, 17, 20,		14, 20, 23,
+			 2,  8,  5,		 2, 11,  8,
+			 0, 12, 21,		 0, 21,  9,
+			 3, 18, 15,		 3,  6, 18,
+			 1, 16, 13,		 1,  4, 16,
+			10, 19,  7,		10, 22, 19,
 		};
 
 		D3D11_BUFFER_DESC ibd = {};
@@ -322,10 +339,11 @@ namespace EnvironmentalEngine{
 		D3D11_INPUT_ELEMENT_DESC layout[] = {
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 			
 		Check(m_device->CreateInputLayout(
-			layout, 2,
+			layout, 3,
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			&m_inputLayout
 		));
