@@ -1,8 +1,6 @@
 cbuffer FrameConstants : register(b0)
 {
-    float offsetX;
-    float offsetY;
-    float padding[2];
+    float4x4 transform;
 };
 
 struct VSInput
@@ -21,11 +19,7 @@ VSOutput VSMain(VSInput input)
 {
     VSOutput output;
 
-    output.position = float4(
-    
-    input.position.x + offsetX,
-    input.position.y + offsetY,
-    input.position.z, 1.0);
+    output.position = mul(float4(input.position, 1.0), transform);
     output.color = input.color;
     return output;
 }

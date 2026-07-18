@@ -3,12 +3,14 @@
 #include <stdexcept>
 #include <d3dcompiler.h>
 #include <cmath>
+#include <DirectXMath.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
 using Microsoft::WRL::ComPtr;
+using namespace DirectX;
 
 inline void Check(HRESULT hr) 
 {
@@ -19,9 +21,7 @@ inline void Check(HRESULT hr)
 }
 
 struct FrameConstants {
-	float offsetX;
-	float offsetY;
-	float padding[2];	
+	XMFLOAT4X4 transform;
 };
 
 struct Vertex
@@ -120,9 +120,12 @@ namespace EnvironmentalEngine{
 		static float time = 0.0f;
 		time += 0.007f;
 
+		float angle = time / 5.0f;
+
+		XMMATRIX rotation = XMMatrixRotationZ(angle);
+
 		FrameConstants constants = {};
-		constants.offsetX = sinf(time) * 0.5f;
-		constants.offsetY = 0.0f;
+		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(rotation));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
