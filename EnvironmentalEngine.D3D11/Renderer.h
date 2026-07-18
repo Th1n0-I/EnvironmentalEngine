@@ -33,5 +33,6 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_constantBuffer;
 
 		float m_spinSpeed = 1.0f;
+		float m_fov = 60.0f;
 	};
 }

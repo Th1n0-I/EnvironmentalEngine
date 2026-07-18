@@ -168,17 +168,27 @@ namespace EnvironmentalEngine{
 		ImGui::Begin("Triangle Rotation");
 		ImGui::Text("Use the slider to adjust the rotation speed of the triangle.");
 		ImGui::SliderFloat("Rotation Speed", &m_spinSpeed, 0.0f, 10.0f);
+		ImGui::Text("Use the slider to adjust the fov of the camera");
+		ImGui::SliderFloat("FOV", &m_fov, 1.0f, 179.0f);
 		ImGui::End();
 		
 		static float angle = 0.0f;
 
 		angle += deltaTime * m_spinSpeed;
 
-		XMMATRIX rotation = XMMatrixRotationZ(angle);
-		XMMATRIX scale = XMMatrixScaling(1.0f / aspect_ratio, 1.0f, 1.0f);
+		XMMATRIX world = XMMatrixRotationY(angle);
+		
+		XMVECTOR eye = XMVectorSet(0.0f, 0.0f, -3.0f, 0.0f);
+		XMVECTOR target = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
 
-		XMMATRIX finalMatrix = rotation * scale;
-
+		XMMATRIX proj = XMMatrixPerspectiveFovLH(
+			XMConvertToRadians(m_fov),
+			aspect_ratio,
+			0.1f,
+			1000.0f);
+		XMMATRIX finalMatrix = world * view * proj;
 
 		FrameConstants constants = {};
 		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(finalMatrix));
