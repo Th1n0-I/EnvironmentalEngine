@@ -2,6 +2,7 @@
 #include "Renderer.h"
 #include <stdexcept>
 #include <d3dcompiler.h>
+#include <cmath>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -16,6 +17,12 @@ inline void Check(HRESULT hr)
 		throw std::runtime_error("D3D11 Call failed!");
 	}
 }
+
+struct FrameConstants {
+	float offsetX;
+	float offsetY;
+	float padding[2];	
+};
 
 struct Vertex
 {
@@ -110,6 +117,20 @@ namespace EnvironmentalEngine{
 		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
 
+		static float time = 0.0f;
+		time += 0.007f;
+
+		FrameConstants constants = {};
+		constants.offsetX = sinf(time) * 0.5f;
+		constants.offsetY = 0.0f;
+
+		D3D11_MAPPED_SUBRESOURCE mapped = {};
+		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &constants, sizeof(constants));
+		m_context->Unmap(m_constantBuffer.Get(), 0);
+
+		m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
 
@@ -143,8 +164,16 @@ namespace EnvironmentalEngine{
 	    
 	    D3D11_SUBRESOURCE_DATA init = {};
 	    init.pSysMem = vertices;
-	    
-	    Check(m_device->CreateBuffer(&bd, &init, &m_vertexBuffer)); 
+
+		Check(m_device->CreateBuffer(&bd, &init, &m_vertexBuffer));
+
+		D3D11_BUFFER_DESC cbd = {};
+		cbd.ByteWidth = sizeof(FrameConstants);
+		cbd.Usage = D3D11_USAGE_DYNAMIC;
+		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+		Check(m_device->CreateBuffer(&cbd, nullptr, &m_constantBuffer));
 
 		std::wstring shaderPath = ExeDir() + L"Triangle.hlsl";
 
