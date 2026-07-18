@@ -2,11 +2,21 @@
 //
 
 #include <iostream>
-#include "Engine.h"
+#include "Window.h"
+#include "Renderer.h"
 
 int main()
 {
-    std::cout << EnvironmentalEngine::Engine::Greet() << "\n";
+    using namespace EnvironmentalEngine;
+
+    Window window(L"Environmental Engine", 1280, 720);
+    Renderer renderer(window.Handle(), window.Width(), window.Height());
+
+    while (window.ProccessMessages()) {
+        renderer.BeginFrame();
+        renderer.EndFrame();
+    }
+
     return 0;
 }
 
