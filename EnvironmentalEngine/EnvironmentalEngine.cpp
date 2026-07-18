@@ -6,6 +6,7 @@
 #include "Renderer.h"
 #include "Timer.h"
 #include "Camera.h"
+#include "imgui/imgui.h"
 
 int main()
 {
@@ -18,10 +19,19 @@ int main()
 
     Camera camera;
 
+    
+
     while (window.ProccessMessages()) {
+        Input& input = window.GetInput();
 		timer.Tick();
 
-		camera.Update(window.GetInput(), timer.DeltaTime());
+		camera.Update(input, timer.DeltaTime());
+
+        int deltaX, deltaY;
+        window.UpdateMouseLock(deltaX, deltaY);
+
+        if (!ImGui::GetIO().WantCaptureMouse)
+            camera.Rotate(deltaX, deltaY);
 
         renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix());
         renderer.EndFrame();

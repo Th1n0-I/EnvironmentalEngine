@@ -95,8 +95,50 @@ namespace EnvironmentalEngine {
 		case WM_KEYUP:
 			m_input.OnKeyUp(static_cast<int>(wParam));
 			return 0;
+		case WM_MOUSEMOVE:
+			m_input.OnMouseMove(LOWORD(lParam), HIWORD(lParam));
+			return 0;
+		case WM_RBUTTONDOWN:
+			m_input.onRightDown();
+			return 0;
+		case WM_RBUTTONUP:
+			m_input.onRightUp();
+			return 0;
 		}
 
 		return DefWindowProcW(m_hwnd, msg, wParam, lParam);
+	}
+
+	void Window::UpdateMouseLock(int& outDeltaX, int& outDeltaY) {
+		outDeltaX = 0;
+		outDeltaY = 0;
+
+		static bool wasLooking = false;
+		bool isLooking = m_input.isRightDown();
+
+		if (isLooking) {
+			RECT rect;
+			GetClientRect(m_hwnd, &rect);
+			POINT center = { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 };
+			POINT centerScreen = center;
+			ClientToScreen(m_hwnd, &centerScreen);
+
+			if (wasLooking) {
+				POINT cursor;
+				GetCursorPos(&cursor);
+				outDeltaX = cursor.x - centerScreen.x;
+				outDeltaY = cursor.y - centerScreen.y;
+			}
+
+			SetCursorPos(centerScreen.x, centerScreen.y);
+
+			if (!wasLooking) {
+				ShowCursor(FALSE);
+			}
+		}
+		else if (wasLooking) {
+			ShowCursor(TRUE);
+		}
+		wasLooking = isLooking;
 	}
 }

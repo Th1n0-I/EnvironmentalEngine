@@ -13,9 +13,12 @@ namespace EnvironmentalEngine {
 
 		void Update(const Input& input, float deltaTime);
 
+		void Rotate(float deltaYaw, float deltaPitch);
+
 		DirectX::XMFLOAT3 position = { 0.0f, 0.0f, -3.0f };
 		float yaw = 0.0f;
 		float pitch = 0.0f;
+		float lookSensitivity = 0.005f;
 		float moveSpeed = 3.0f;
 	};
 }

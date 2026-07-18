@@ -40,4 +40,13 @@ namespace EnvironmentalEngine {
 
 		XMStoreFloat3(&position, pos);
 	}
+
+	void Camera::Rotate(float deltaYaw, float deltaPitch) {
+		yaw += deltaYaw * lookSensitivity;
+		pitch -= deltaPitch * lookSensitivity;
+
+		float limit = XMConvertToRadians(89.0f);
+		if (pitch > limit) pitch = limit;
+		if (pitch < -limit) pitch = -limit;
+	}
 }
