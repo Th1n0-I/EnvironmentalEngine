@@ -2,6 +2,7 @@
 #pragma once
 #include <d3d11.h>
 #include <wrl/client.h>
+#include <Camera.h>
 
 namespace EnvironmentalEngine {
 	class Renderer {
@@ -23,7 +24,7 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rtv;
 	    
-	    void CreateTriangle();
+	    void CreateCube();
 	    
 	    Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_indexBuffer;
@@ -40,5 +41,7 @@ namespace EnvironmentalEngine {
 		float m_fov = 60.0f;
 
 		UINT m_indexCount = 0;
+
+		Camera m_camera;
 	};
 }

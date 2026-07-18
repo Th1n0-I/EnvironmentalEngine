@@ -6,6 +6,7 @@
 #include <d3dcompiler.h>
 #include <cmath>
 #include <DirectXMath.h>
+#include <Camera.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -179,6 +180,9 @@ namespace EnvironmentalEngine{
 
 	void Renderer::BeginFrame(int width, int height, float deltaTime) 
     {
+		static float pitch = 0.0f;
+		static float yaw = 0.0f;
+
 		if ((width != old_width || height != old_height) && width != 0 && height != 0) {
 			Resize(width, height);
 			old_width = width;
@@ -195,11 +199,14 @@ namespace EnvironmentalEngine{
 		ImGui::NewFrame();
 
 		ImGui::Begin("Triangle Rotation");
-		ImGui::Text("Use the slider to adjust the rotation speed of the triangle.");
 		ImGui::SliderFloat("Rotation Speed", &m_spinSpeed, 0.0f, 10.0f);
-		ImGui::Text("Use the slider to adjust the fov of the camera");
 		ImGui::SliderFloat("FOV", &m_fov, 1.0f, 179.0f);
+		ImGui::SliderFloat("Pitch", &pitch, -90.0f, 90.0f);
+		ImGui::SliderFloat("Yaw", &yaw, -180.0f, 180.0f);
 		ImGui::End();
+
+		float radPitch = XMConvertToRadians(pitch);
+		float radYaw = XMConvertToRadians(yaw);
 		
 		static float angle = 0.0f;
 
@@ -207,10 +214,7 @@ namespace EnvironmentalEngine{
 
 		XMMATRIX world = XMMatrixRotationY(angle);
 		
-		XMVECTOR eye = XMVectorSet(0.0f, 0.0f, -3.0f, 0.0f);
-		XMVECTOR target = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
+		XMMATRIX view = m_camera.GetViewMatrix();
 
 		XMMATRIX proj = XMMatrixPerspectiveFovLH(
 			XMConvertToRadians(m_fov),
