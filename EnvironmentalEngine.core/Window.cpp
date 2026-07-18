@@ -89,6 +89,12 @@ namespace EnvironmentalEngine {
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
+		case WM_KEYDOWN:
+			m_input.OnKeyDown(static_cast<int>(wParam));
+			return 0;
+		case WM_KEYUP:
+			m_input.OnKeyUp(static_cast<int>(wParam));
+			return 0;
 		}
 
 		return DefWindowProcW(m_hwnd, msg, wParam, lParam);

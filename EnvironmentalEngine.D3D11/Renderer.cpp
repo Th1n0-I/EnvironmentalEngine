@@ -6,7 +6,6 @@
 #include <d3dcompiler.h>
 #include <cmath>
 #include <DirectXMath.h>
-#include <Camera.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -178,7 +177,7 @@ namespace EnvironmentalEngine{
 		ImGui::DestroyContext();
 	}
 
-	void Renderer::BeginFrame(int width, int height, float deltaTime) 
+	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view) 
     {
 		static float pitch = 0.0f;
 		static float yaw = 0.0f;
@@ -213,8 +212,6 @@ namespace EnvironmentalEngine{
 		angle += deltaTime * m_spinSpeed;
 
 		XMMATRIX world = XMMatrixRotationY(angle);
-		
-		XMMATRIX view = m_camera.GetViewMatrix();
 
 		XMMATRIX proj = XMMatrixPerspectiveFovLH(
 			XMConvertToRadians(m_fov),

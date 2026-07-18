@@ -8,6 +8,7 @@
 #endif
 #include <Windows.h>
 #include <string>
+#include "Input.h"
 
 namespace EnvironmentalEngine {
 	class Window {
@@ -24,6 +25,8 @@ namespace EnvironmentalEngine {
 		int Width() const { return m_width; }
 		int Height() const { return m_height; }
 
+		Input& GetInput() { return m_input; }
+
 	private:
 		static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 		LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -31,5 +34,7 @@ namespace EnvironmentalEngine {
 		HWND m_hwnd = nullptr;
 		int m_width = 0;
 		int m_height = 0;
+
+		Input m_input;
 	};
 }

@@ -25,4 +25,19 @@ namespace EnvironmentalEngine {
 		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		return XMMatrixLookAtLH(eye, target, up);
 	}
+
+	void Camera::Update(const Input& input, float deltaTime) {
+		XMVECTOR pos = XMLoadFloat3(&position);
+		XMVECTOR forward = GetForward();
+		XMVECTOR right = GetRight();
+
+		float distance = moveSpeed * deltaTime;
+
+		if (input.IsKeyDown('W')) pos = XMVectorAdd(pos, XMVectorScale(forward, distance));
+		if (input.IsKeyDown('S')) pos = XMVectorSubtract(pos, XMVectorScale(forward, distance));
+		if (input.IsKeyDown('D')) pos = XMVectorAdd(pos, XMVectorScale(right, distance));
+		if (input.IsKeyDown('A')) pos = XMVectorSubtract(pos, XMVectorScale(right, distance));
+
+		XMStoreFloat3(&position, pos);
+	}
 }

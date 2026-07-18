@@ -5,6 +5,7 @@
 #include "Window.h"
 #include "Renderer.h"
 #include "Timer.h"
+#include "Camera.h"
 
 int main()
 {
@@ -15,10 +16,18 @@ int main()
 
     Timer timer;
 
+    Camera camera;
+
     while (window.ProccessMessages()) {
 		timer.Tick();
-        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime());
+
+		camera.Update(window.GetInput(), timer.DeltaTime());
+
+        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix());
         renderer.EndFrame();
+        if (window.GetInput().IsKeyDown('W')) {
+			OutputDebugStringA("W key is pressed\n");
+		}
     }
 
     return 0;

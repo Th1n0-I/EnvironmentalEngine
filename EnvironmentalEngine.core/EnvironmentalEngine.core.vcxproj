@@ -138,6 +138,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Input.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Window.h" />

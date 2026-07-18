@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 #include <Camera.h>
+#include <DirectXMath.h>
 
 namespace EnvironmentalEngine {
 	class Renderer {
@@ -13,7 +14,7 @@ namespace EnvironmentalEngine {
 		Renderer(const Renderer&) = delete;
 		Renderer& operator = (const Renderer&) = delete;
 
-		void BeginFrame(int width, int height, float deltaTime);
+		void BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view);
 		void EndFrame();   
 
 		void Resize(int width, int height);
@@ -41,7 +42,5 @@ namespace EnvironmentalEngine {
 		float m_fov = 60.0f;
 
 		UINT m_indexCount = 0;
-
-		Camera m_camera;
 	};
 }
