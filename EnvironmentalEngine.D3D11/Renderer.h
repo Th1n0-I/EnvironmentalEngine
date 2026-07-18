@@ -11,8 +11,10 @@ namespace EnvironmentalEngine {
 		Renderer(const Renderer&) = delete;
 		Renderer& operator = (const Renderer&) = delete;
 
-		void BeginFrame();
+		void BeginFrame(int width, int height, float deltaTime);
 		void EndFrame();   
+
+		void Resize(int width, int height);
 	
 	private:
 		Microsoft::WRL::ComPtr<ID3D11Device> m_device;

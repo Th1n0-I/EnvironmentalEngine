@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Window.h"
 #include "Renderer.h"
+#include "Timer.h"
 
 int main()
 {
@@ -12,8 +13,11 @@ int main()
     Window window(L"Environmental Engine", 1280, 720);
     Renderer renderer(window.Handle(), window.Width(), window.Height());
 
+    Timer timer;
+
     while (window.ProccessMessages()) {
-        renderer.BeginFrame();
+		timer.Tick();
+        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime());
         renderer.EndFrame();
     }
 

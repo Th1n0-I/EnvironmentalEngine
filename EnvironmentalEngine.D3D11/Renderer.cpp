@@ -12,6 +12,10 @@
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
+int old_width = 0;
+int old_height = 0;
+float aspect_ratio = 0.0f;
+
 inline void Check(HRESULT hr) 
 {
 	if (FAILED(hr)) 
@@ -66,6 +70,25 @@ ComPtr<ID3DBlob> LoadShaderByteCode(
 }
 
 namespace EnvironmentalEngine{
+	void Renderer::Resize(int width, int height)
+	{
+		if (width == 0 || height == 0) return;
+		aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+		m_rtv.Reset();
+
+		Check(m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0));
+
+		ComPtr<ID3D11Texture2D> backBuffer;
+		Check(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
+		Check(m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_rtv));
+
+		D3D11_VIEWPORT vp = {};
+		vp.Width = static_cast<float>(width);
+		vp.Height = static_cast<float>(height);
+		vp.MaxDepth = 1.0f;
+		m_context->RSSetViewports(1, &vp);
+	}
+
 	Renderer::Renderer(HWND hwnd, int width, int height) 
     {
 		DXGI_SWAP_CHAIN_DESC desc = {};
@@ -111,21 +134,30 @@ namespace EnvironmentalEngine{
 	    CreateTriangle();
 	}
 
-	void Renderer::BeginFrame() 
+	void Renderer::BeginFrame(int width, int height, float deltaTime) 
     {
+		if ((width != old_width || height != old_height) && width != 0 && height != 0) {
+			Resize(width, height);
+			old_width = width;
+			old_height = height;
+		}
+
 		const float clear[4] = { 0.39f, 0.58f, 0.93f, 1.0f };
 		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
+		
+		static float angle = 0.0f;
 
-		static float time = 0.0f;
-		time += 0.007f;
-
-		float angle = time / 5.0f;
+		angle += deltaTime * 5.0f;
 
 		XMMATRIX rotation = XMMatrixRotationZ(angle);
+		XMMATRIX scale = XMMatrixScaling(1.0f / aspect_ratio, 1.0f, 1.0f);
+
+		XMMATRIX finalMatrix = rotation * scale;
+
 
 		FrameConstants constants = {};
-		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(rotation));
+		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(finalMatrix));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
