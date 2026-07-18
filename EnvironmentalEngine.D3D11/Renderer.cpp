@@ -167,11 +167,12 @@ namespace EnvironmentalEngine{
 
 		ImGui::Begin("Triangle Rotation");
 		ImGui::Text("Use the slider to adjust the rotation speed of the triangle.");
+		ImGui::SliderFloat("Rotation Speed", &m_spinSpeed, 0.0f, 10.0f);
 		ImGui::End();
 		
 		static float angle = 0.0f;
 
-		angle += deltaTime * 5.0f;
+		angle += deltaTime * m_spinSpeed;
 
 		XMMATRIX rotation = XMMatrixRotationZ(angle);
 		XMMATRIX scale = XMMatrixScaling(1.0f / aspect_ratio, 1.0f, 1.0f);
