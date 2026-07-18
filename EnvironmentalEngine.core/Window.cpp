@@ -2,6 +2,8 @@
 #include "Window.h"
 #include <stdexcept>
 
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 namespace EnvironmentalEngine {
 	namespace {
 		constexpr const wchar_t* kClassName = L"EnvironmentalEngineWindow";
@@ -58,6 +60,8 @@ namespace EnvironmentalEngine {
 	}
 
 	LRESULT CALLBACK Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+		if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+			return true;
 		Window* self = nullptr;
 
 		if (msg == WM_NCCREATE) {

@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "Renderer.h"
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_impl_dx11.h"
 #include <stdexcept>
 #include <d3dcompiler.h>
 #include <cmath>
@@ -132,6 +134,19 @@ namespace EnvironmentalEngine{
 		m_context->RSSetViewports(1, &vp);
         
 	    CreateTriangle();
+
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGui::StyleColorsDark();
+		ImGui_ImplWin32_Init(hwnd);
+		ImGui_ImplDX11_Init(m_device.Get(), m_context.Get());
+	}
+
+	Renderer::~Renderer()
+	{
+		ImGui_ImplDX11_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
 	}
 
 	void Renderer::BeginFrame(int width, int height, float deltaTime) 
@@ -145,6 +160,14 @@ namespace EnvironmentalEngine{
 		const float clear[4] = { 0.39f, 0.58f, 0.93f, 1.0f };
 		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
+
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Begin("Triangle Rotation");
+		ImGui::Text("Use the slider to adjust the rotation speed of the triangle.");
+		ImGui::End();
 		
 		static float angle = 0.0f;
 
@@ -181,6 +204,8 @@ namespace EnvironmentalEngine{
 
 	void Renderer::EndFrame() 
     {
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 		m_swapChain->Present(1, 0);
 	}
 

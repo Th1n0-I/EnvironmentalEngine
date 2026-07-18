@@ -7,6 +7,7 @@ namespace EnvironmentalEngine {
 	class Renderer {
 	public:
 		Renderer(HWND hwnd, int width, int height);
+		~Renderer();
 
 		Renderer(const Renderer&) = delete;
 		Renderer& operator = (const Renderer&) = delete;
