@@ -4,14 +4,13 @@ cbuffer FrameConstants : register(b0)
     float4x4 world;
     float4x4 normal;
     float3 camPos;
-    float3 color;
-    float padding[2];
+    float padding0;
+    float4 cubeColor;
 };
 
 struct VSInput
 {
     float3 position : POSITION;      
-    float3 color : COLOR;
     float3 normal : NORMAL;
 };
 
@@ -19,7 +18,6 @@ struct VSOutput
 {
     float4 position : SV_POSITION;
     float3 worldPos : TEXCOORD0;
-    float3 color : COLOR;
     float3 normal : NORMAL;
 };
 
@@ -31,7 +29,6 @@ VSOutput VSMain(VSInput input)
     
     output.position = mul(position, transform);
     output.worldPos = mul(position, world).xyz;
-    output.color = input.color;
     output.normal = normalize(mul(float4(input.normal, 0.0), normal));
     return output;
 }
@@ -40,7 +37,7 @@ float4 PSMain(VSOutput input) : SV_Target
 {
         float3 N = normalize(input.normal);
     
-        float4 ambientColor = float4(1.0f, 0.5f, 0.0f, 0.1f);
+        float4 ambientColor = float4(1.0f, 1.0f, 1.0f, 0.1f);
         float4 lightColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
         float3 lightDir = normalize(float3(1.0f, 0.0f, 0.0f));
     
@@ -56,6 +53,6 @@ float4 PSMain(VSOutput input) : SV_Target
         float3 diffuse = lightColor.rgb * diff * lightColor.a;
         float3 specular = lightColor.rgb * spec * 0.5;
     
-        return float4(input.color * (ambient + diffuse) + specular, 1.0);
+        return float4(cubeColor.rgb * (ambient + diffuse) + specular, 1.0);
     
 }

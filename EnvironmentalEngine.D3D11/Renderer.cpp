@@ -31,13 +31,13 @@ struct FrameConstants {
 	XMFLOAT4X4 world;
 	XMFLOAT4X4 normal;
 	XMFLOAT3 camPos;
-	XMFLOAT3 color;
-	float padding[2];
+	float padding0;
+	XMFLOAT4 cubeColor;
 };
 
 struct Vertex
 {
-    float x, y, z, r, g, b, nx, ny, nz;
+    float x, y, z, nx, ny, nz;
 };
 
 std::wstring ExeDir()
@@ -198,12 +198,16 @@ namespace EnvironmentalEngine{
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
 		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
+		static XMFLOAT4 cubeColor;
+
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
 		ImGui::Begin("Environmental Engine");
-		ImGui::Text("X: %.2f Y: %.2f Z: %.2f", camPos);
+		if(ImGui::CollapsingHeader("Cube Color"))
+			ImGui::ColorPicker4("Cube color", &cubeColor.x);
+
 		ImGui::End();
 
 		float radPitch = XMConvertToRadians(pitch);
@@ -229,6 +233,7 @@ namespace EnvironmentalEngine{
 		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&constants.normal, normalMatrix);
 		XMStoreFloat3(&constants.camPos, DirectX::XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
+		XMStoreFloat4(&constants.cubeColor, DirectX::XMVectorSet(cubeColor.x, cubeColor.y, cubeColor.z, cubeColor.z));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -262,31 +267,31 @@ namespace EnvironmentalEngine{
 	void Renderer::CreateCube(XMFLOAT3 color)
     {
 		Vertex vertices[] =
-		{//     x      y      z            r        g        b          nx     ny     nz
-			{ -0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	  -1.0f,  0.0f,  0.0f }, //0
-			{ -0.5f, -0.5f, -0.5f,		color.x, color.y, color.z, 	   0.0f, -1.0f,  0.0f }, //1
-			{ -0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,     0.0f,  0.0f, -1.0f }, //2
-			{  0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //3
-			{  0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f, -1.0f,  0.0f }, //4
-			{  0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f, -1.0f }, //5
-			{  0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //6
-			{  0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //7
-			{  0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f, -1.0f }, //8
-			{ -0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	  -1.0f,  0.0f,  0.0f }, //9
-			{ -0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //10
-			{ -0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f, -1.0f }, //11
-			{ -0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,    -1.0f,  0.0f,  0.0f }, //12 
-			{ -0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f, -1.0f,  0.0f }, //13
-			{ -0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f,  1.0f }, //14
-			{  0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //15
-			{  0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f, -1.0f,  0.0f }, //16
-			{  0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f,  1.0f }, //17
-			{  0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //18
-			{  0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //19
-			{  0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,     0.0f,  0.0f,  1.0f }, //20
-			{ -0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,    -1.0f,  0.0f,  0.0f }, //21
-			{ -0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //22
-			{ -0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f,  1.0f }, //23
+		{//     x      y      z         nx     ny     nz
+			{ -0.5f, -0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f }, //0
+			{ -0.5f, -0.5f, -0.5f, 	   0.0f, -1.0f,  0.0f }, //1
+			{ -0.5f, -0.5f, -0.5f,     0.0f,  0.0f, -1.0f }, //2
+			{  0.5f, -0.5f, -0.5f,	   1.0f,  0.0f,  0.0f }, //3
+			{  0.5f, -0.5f, -0.5f,	   0.0f, -1.0f,  0.0f }, //4
+			{  0.5f, -0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //5
+			{  0.5f,  0.5f, -0.5f,	   1.0f,  0.0f,  0.0f }, //6
+			{  0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f }, //7
+			{  0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //8
+			{ -0.5f,  0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f }, //9
+			{ -0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f }, //10
+			{ -0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //11
+			{ -0.5f, -0.5f,  0.5f,    -1.0f,  0.0f,  0.0f }, //12 
+			{ -0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f }, //13
+			{ -0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //14
+			{  0.5f, -0.5f,  0.5f,	   1.0f,  0.0f,  0.0f }, //15
+			{  0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f }, //16
+			{  0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //17
+			{  0.5f,  0.5f,  0.5f,	   1.0f,  0.0f,  0.0f }, //18
+			{  0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f }, //19
+			{  0.5f,  0.5f,  0.5f,     0.0f,  0.0f,  1.0f }, //20
+			{ -0.5f,  0.5f,  0.5f,    -1.0f,  0.0f,  0.0f }, //21
+			{ -0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f }, //22
+			{ -0.5f,  0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //23
 		};
 
 		unsigned int indices[] =
@@ -346,12 +351,11 @@ namespace EnvironmentalEngine{
 
 		D3D11_INPUT_ELEMENT_DESC layout[] = {
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 			
 		Check(m_device->CreateInputLayout(
-			layout, 3,
+			layout, 2,
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			&m_inputLayout
 		));
