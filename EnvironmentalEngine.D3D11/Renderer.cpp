@@ -28,6 +28,11 @@ inline void Check(HRESULT hr)
 
 struct FrameConstants {
 	XMFLOAT4X4 transform;
+	XMFLOAT4X4 world;
+	XMFLOAT4X4 normal;
+	XMFLOAT3 camPos;
+	XMFLOAT3 color;
+	float padding[2];
 };
 
 struct Vertex
@@ -161,7 +166,7 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
 		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
         
-	    CreateCube();
+		CreateCube(XMFLOAT3(1,1,1));
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -177,7 +182,7 @@ namespace EnvironmentalEngine{
 		ImGui::DestroyContext();
 	}
 
-	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view) 
+	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos) 
     {
 		static float pitch = 0.0f;
 		static float yaw = 0.0f;
@@ -197,11 +202,8 @@ namespace EnvironmentalEngine{
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::Begin("Triangle Rotation");
-		ImGui::SliderFloat("Rotation Speed", &m_spinSpeed, 0.0f, 10.0f);
-		ImGui::SliderFloat("FOV", &m_fov, 1.0f, 179.0f);
-		ImGui::SliderFloat("Pitch", &pitch, -90.0f, 90.0f);
-		ImGui::SliderFloat("Yaw", &yaw, -180.0f, 180.0f);
+		ImGui::Begin("Environmental Engine");
+		ImGui::Text("X: %.2f Y: %.2f Z: %.2f", camPos);
 		ImGui::End();
 
 		float radPitch = XMConvertToRadians(pitch);
@@ -220,8 +222,13 @@ namespace EnvironmentalEngine{
 			1000.0f);
 		XMMATRIX finalMatrix = world * view * proj;
 
+		XMMATRIX normalMatrix = XMMatrixInverse(nullptr, world);
+
 		FrameConstants constants = {};
 		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(finalMatrix));
+		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
+		XMStoreFloat4x4(&constants.normal, normalMatrix);
+		XMStoreFloat3(&constants.camPos, DirectX::XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -229,6 +236,7 @@ namespace EnvironmentalEngine{
 		m_context->Unmap(m_constantBuffer.Get(), 0);
 
 		m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+		m_context->PSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
@@ -248,37 +256,37 @@ namespace EnvironmentalEngine{
     {
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-		m_swapChain->Present(1, 0);
+		m_swapChain->Present(0, 0);
 	}
 
-    void Renderer::CreateCube()
+	void Renderer::CreateCube(XMFLOAT3 color)
     {
 		Vertex vertices[] =
-		{//     x      y      z          r     g     b          nx     ny     nz
-			{ -0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	  -1.0f,  0.0f,  0.0f }, //0
-			{ -0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f, 	   0.0f, -1.0f,  0.0f }, //1
-			{ -0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,      0.0f,  0.0f, -1.0f }, //2
-			{  0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //3
-			{  0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f, -1.0f,  0.0f }, //4
-			{  0.5f, -0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f, -1.0f }, //5
-			{  0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //6
-			{  0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //7
-			{  0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f, -1.0f }, //8
-			{ -0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	  -1.0f,  0.0f,  0.0f }, //9
-			{ -0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //10
-			{ -0.5f,  0.5f, -0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f, -1.0f }, //11
-			{ -0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,     -1.0f,  0.0f,  0.0f }, //12 
-			{ -0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f, -1.0f,  0.0f }, //13
-			{ -0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f,  1.0f }, //14
-			{  0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //15
-			{  0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f, -1.0f,  0.0f }, //16
-			{  0.5f, -0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f,  1.0f }, //17
-			{  0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   1.0f,  0.0f,  0.0f }, //18
-			{  0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //19
-			{  0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,      0.0f,  0.0f,  1.0f }, //20
-			{ -0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,     -1.0f,  0.0f,  0.0f }, //21
-			{ -0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  1.0f,  0.0f }, //22
-			{ -0.5f,  0.5f,  0.5f,		0.8f, 0.3f, 0.1f,	   0.0f,  0.0f,  1.0f }, //23
+		{//     x      y      z            r        g        b          nx     ny     nz
+			{ -0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	  -1.0f,  0.0f,  0.0f }, //0
+			{ -0.5f, -0.5f, -0.5f,		color.x, color.y, color.z, 	   0.0f, -1.0f,  0.0f }, //1
+			{ -0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,     0.0f,  0.0f, -1.0f }, //2
+			{  0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //3
+			{  0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f, -1.0f,  0.0f }, //4
+			{  0.5f, -0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f, -1.0f }, //5
+			{  0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //6
+			{  0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //7
+			{  0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f, -1.0f }, //8
+			{ -0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	  -1.0f,  0.0f,  0.0f }, //9
+			{ -0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //10
+			{ -0.5f,  0.5f, -0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f, -1.0f }, //11
+			{ -0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,    -1.0f,  0.0f,  0.0f }, //12 
+			{ -0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f, -1.0f,  0.0f }, //13
+			{ -0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f,  1.0f }, //14
+			{  0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //15
+			{  0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f, -1.0f,  0.0f }, //16
+			{  0.5f, -0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f,  1.0f }, //17
+			{  0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   1.0f,  0.0f,  0.0f }, //18
+			{  0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //19
+			{  0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,     0.0f,  0.0f,  1.0f }, //20
+			{ -0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,    -1.0f,  0.0f,  0.0f }, //21
+			{ -0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  1.0f,  0.0f }, //22
+			{ -0.5f,  0.5f,  0.5f,		color.x, color.y, color.z,	   0.0f,  0.0f,  1.0f }, //23
 		};
 
 		unsigned int indices[] =

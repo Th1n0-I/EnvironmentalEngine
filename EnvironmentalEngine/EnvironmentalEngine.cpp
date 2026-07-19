@@ -33,11 +33,8 @@ int main()
         if (!ImGui::GetIO().WantCaptureMouse)
             camera.Rotate(deltaX, deltaY);
 
-        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix());
+        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position);
         renderer.EndFrame();
-        if (window.GetInput().IsKeyDown('W')) {
-			OutputDebugStringA("W key is pressed\n");
-		}
     }
 
     return 0;

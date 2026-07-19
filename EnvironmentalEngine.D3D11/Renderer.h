@@ -14,7 +14,7 @@ namespace EnvironmentalEngine {
 		Renderer(const Renderer&) = delete;
 		Renderer& operator = (const Renderer&) = delete;
 
-		void BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view);
+		void BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos);
 		void EndFrame();   
 
 		void Resize(int width, int height);
@@ -25,7 +25,7 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rtv;
 	    
-	    void CreateCube();
+	    void CreateCube(DirectX::XMFLOAT3 color);
 	    
 	    Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_indexBuffer;
