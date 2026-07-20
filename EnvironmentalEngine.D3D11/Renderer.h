@@ -15,7 +15,7 @@ namespace EnvironmentalEngine {
 		Renderer(const Renderer&) = delete;
 		Renderer& operator = (const Renderer&) = delete;
 
-		void BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos, DirectionalLight& dl);
+		void BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos, DirectionalLight& dl, AmbientLight& al, PointLight& pl);
 		void EndFrame();   
 
 		void Resize(int width, int height);

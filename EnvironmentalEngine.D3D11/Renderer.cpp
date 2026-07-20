@@ -40,6 +40,10 @@ struct FrameConstants {
 	float specularIntensity;
 	float smoothness;
 	XMFLOAT3 lightDirection;
+	XMFLOAT3 pLightPosition;
+	float pIntensity;
+	XMFLOAT3 pColor;
+	float padding1;
 };
 
 struct Vertex
@@ -189,7 +193,7 @@ namespace EnvironmentalEngine{
 		ImGui::DestroyContext();
 	}
 
-	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos, DirectionalLight& dl) 
+	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos, DirectionalLight& dl, AmbientLight& al, PointLight& pl) 
     {
 		static float pitch = 0.0f;
 		static float yaw = 0.0f;
@@ -206,8 +210,6 @@ namespace EnvironmentalEngine{
 		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		static XMFLOAT4 cubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
-		static XMFLOAT3 ambientColor;
-		static float ambientIntensity;
 		static float specularIntensity;
 		static float smoothness;
 
@@ -219,16 +221,21 @@ namespace EnvironmentalEngine{
 		if (ImGui::CollapsingHeader("Cube")){
 			ImGui::SliderFloat("Rotation speed", &m_spinSpeed, 0.0f, 10.0f);
 			ImGui::ColorPicker4("Cube color", &cubeColor.x);
+			ImGui::SliderFloat("Smoothness", &smoothness, 0.0f, 1.0f);
+			ImGui::SliderFloat("Metallicness", &specularIntensity, 0.0f, 1.0f);
 		}
 		if (ImGui::CollapsingHeader("Ambient light")) {
-			ImGui::ColorPicker3("Ambient color", &ambientColor.x);
-			ImGui::SliderFloat("Ambient intensity", &ambientIntensity, 0.0f, 1.0f);
+			ImGui::ColorPicker3("color", &al.color.x);
+			ImGui::SliderFloat("intensity", &al.intensity, 0.0f, 1.0f);
 		}
 		if(ImGui::CollapsingHeader("Directional Light")){
-			ImGui::SliderFloat3("Light direction", &dl.direction.x, -1.0f, 1.0f);
-			ImGui::ColorPicker3("Light color", &dl.color.x);
-			ImGui::SliderFloat("Specular intensity", &specularIntensity, 0.0f, 1.0f);
-			ImGui::SliderFloat("Smoothness", &smoothness, 0.0f, 1.0f);
+			ImGui::SliderFloat3("direction", &dl.direction.x, -1.0f, 1.0f);
+			ImGui::ColorPicker3("color", &dl.color.x);
+		}
+		if (ImGui::CollapsingHeader("Point light")) {
+			ImGui::ColorPicker3("Color", &pl.color.x);
+			ImGui::SliderFloat3("Position", &pl.position.x, -10.0f, 10.0f);
+			ImGui::SliderFloat("Intensity", &pl.intensity ,0.0f, 1.0f);
 		}
 
 		ImGui::End();
@@ -255,14 +262,22 @@ namespace EnvironmentalEngine{
 		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(finalMatrix));
 		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&constants.normal, normalMatrix);
+
 		XMStoreFloat3(&constants.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
+
 		XMStoreFloat4(&constants.cubeColor, XMVectorSet(cubeColor.x, cubeColor.y, cubeColor.z, cubeColor.z));
-		XMStoreFloat3(&constants.ambientColor, XMVectorSet(ambientColor.x, ambientColor.y, ambientColor.z, 0.0f));
-		XMStoreFloat(&constants.ambientIntensity, XMVectorSet(ambientIntensity, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat3(&constants.lightColor, XMVectorSet(dl.color.x, dl.color.y, dl.color.z, 0.0f));
 		XMStoreFloat(&constants.specularIntensity, XMVectorSet(specularIntensity, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&constants.smoothness, XMVectorSet(smoothness, 0.0f, 0.0f, 0.0f));
+
+		XMStoreFloat3(&constants.ambientColor, XMVectorSet(al.color.x, al.color.y, al.color.z, 0.0f));
+		XMStoreFloat(&constants.ambientIntensity, XMVectorSet(al.intensity, 0.0f, 0.0f, 0.0f));
+		
+		XMStoreFloat3(&constants.lightColor, XMVectorSet(dl.color.x, dl.color.y, dl.color.z, 0.0f));
 		XMStoreFloat3(&constants.lightDirection, XMVectorSet(dl.direction.x, dl.direction.y, dl.direction.z, 0.0f));
+
+		XMStoreFloat3(&constants.pLightPosition, XMVectorSet(pl.position.x, pl.position.y, pl.position.z, 0.0f));
+		XMStoreFloat3(&constants.pColor, XMVectorSet(pl.color.x, pl.color.y, pl.color.z, 0.0f));
+		XMStoreFloat(&constants.pIntensity, XMVectorSet(pl.intensity, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);

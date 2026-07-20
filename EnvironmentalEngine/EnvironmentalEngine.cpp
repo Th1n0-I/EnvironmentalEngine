@@ -21,6 +21,8 @@ int main()
     Camera camera;
 
     DirectionalLight dl;
+    AmbientLight al;
+    PointLight pl;
 
     while (window.ProccessMessages()) {
         Input& input = window.GetInput();
@@ -34,7 +36,7 @@ int main()
         if (!ImGui::GetIO().WantCaptureMouse)
             camera.Rotate(deltaX, deltaY);
 
-        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl);
+        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
         renderer.EndFrame();
     }
 
