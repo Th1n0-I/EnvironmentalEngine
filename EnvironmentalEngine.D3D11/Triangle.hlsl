@@ -1,22 +1,29 @@
-cbuffer FrameConstants : register(b0)
+cbuffer PerFrameConstants : register(b0)
+{
+    float3 camPos;
+    float padding0;
+    float3 ambientColor;
+    float ambientIntensity;
+    float3 lightColor;
+    float padding1;
+    float3 lightDirection;
+    float padding2;
+    float3 pLightPosition;
+    float pIntensity;
+    float3 pColor;
+    float padding3;
+};
+
+cbuffer PerObjectConstants : register(b1)
 {
     float4x4 transform;
     float4x4 world;
     float4x4 normal;
-    float3 camPos;
-    float padding0;
     float4 cubeColor;
-    float3 ambientColor;
-    float ambientIntensity;
-    float3 lightColor;
     float specularIntensity;
     float smoothness;
-    float3 lightDirection;
-    float3 pLightPosition;
-    float pIntensity;
-    float3 pColor;
-    float padding1;
-};
+    float padding[2];
+}
 
 struct VSInput
 {

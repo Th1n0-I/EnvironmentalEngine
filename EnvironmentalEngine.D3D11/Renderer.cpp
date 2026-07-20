@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Renderer.h"
+#include "Mesh.h"
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx11.h"
 #include <stdexcept>
@@ -7,6 +8,7 @@
 #include <cmath>
 #include <DirectXMath.h>
 #include <Lights.h>
+#include <memory>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -27,24 +29,35 @@ inline void Check(HRESULT hr)
 	}
 }
 
-struct FrameConstants {
-	XMFLOAT4X4 transform;
-	XMFLOAT4X4 world;
-	XMFLOAT4X4 normal;
+struct PerFrameConstants {
+	
 	XMFLOAT3 camPos;
 	float padding0;
-	XMFLOAT4 cubeColor;
 	XMFLOAT3 ambientColor;
 	float ambientIntensity;
 	XMFLOAT3 lightColor;
-	float specularIntensity;
-	float smoothness;
+	float padding1;
 	XMFLOAT3 lightDirection;
+	float padding2;
 	XMFLOAT3 pLightPosition;
 	float pIntensity;
 	XMFLOAT3 pColor;
-	float padding1;
+	float padding;
 };
+
+static_assert(sizeof(PerFrameConstants) % 16 == 0, "PerFrameConstants is the wrong size");
+
+struct PerObjectConstants {
+	XMFLOAT4X4 transform;
+	XMFLOAT4X4 world;
+	XMFLOAT4X4 normal;
+	XMFLOAT4 cubeColor;
+	float specularIntensity;
+	float smoothness;
+	float padding[2];
+};
+
+static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
 
 struct Vertex
 {
@@ -209,20 +222,36 @@ namespace EnvironmentalEngine{
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
 		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		static XMFLOAT4 cubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
-		static float specularIntensity;
-		static float smoothness;
+		static XMFLOAT4 firstCubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
+		static float firstCubeSpecularIntensity = 0.5f;
+		static float firstCubeSmoothness = 0.5f;
+		static float firstCubeSpinSpeed = 1.0f;
+
+		static XMFLOAT4 secondCubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
+		static float secondCubeSpecularIntensity = 0.5f;
+		static float secondCubeSmoothness = 0.5f;
+		static float secondCubeSpinSpeed = 1.0f;
 
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
 		ImGui::Begin("Environmental Engine");
-		if (ImGui::CollapsingHeader("Cube")){
-			ImGui::SliderFloat("Rotation speed", &m_spinSpeed, 0.0f, 10.0f);
-			ImGui::ColorPicker4("Cube color", &cubeColor.x);
-			ImGui::SliderFloat("Smoothness", &smoothness, 0.0f, 1.0f);
-			ImGui::SliderFloat("Metallicness", &specularIntensity, 0.0f, 1.0f);
+		if (ImGui::CollapsingHeader("Cube 1")){
+			ImGui::PushID(1);
+			ImGui::SliderFloat("Rotation speed", &firstCubeSpinSpeed, 0.0f, 10.0f);
+			ImGui::ColorPicker4("Cube color", &firstCubeColor.x);
+			ImGui::SliderFloat("Smoothness", &firstCubeSmoothness, 0.0f, 1.0f);
+			ImGui::SliderFloat("Metallicness", &firstCubeSpecularIntensity, 0.0f, 1.0f);
+			ImGui::PopID();
+		}
+		if (ImGui::CollapsingHeader("Cube 2")) {
+			ImGui::PushID(2);
+			ImGui::SliderFloat("Rotation speed", &secondCubeSpinSpeed, 0.0f, 10.0f);
+			ImGui::ColorPicker4("Cube color", &secondCubeColor.x);
+			ImGui::SliderFloat("Smoothness", &secondCubeSmoothness, 0.0f, 1.0f);
+			ImGui::SliderFloat("Metallicness", &secondCubeSpecularIntensity, 0.0f, 1.0f);
+			ImGui::PopID();
 		}
 		if (ImGui::CollapsingHeader("Ambient light")) {
 			ImGui::ColorPicker3("color", &al.color.x);
@@ -243,62 +272,86 @@ namespace EnvironmentalEngine{
 		float radPitch = XMConvertToRadians(pitch);
 		float radYaw = XMConvertToRadians(yaw);
 		
-		static float angle = 0.0f;
+		static float angle1 = 0.0f;
+		static float angle2 = 0.0f;
 
-		angle += deltaTime * m_spinSpeed;
+		angle1 += deltaTime * firstCubeSpinSpeed;
+		angle2 += deltaTime * secondCubeSpinSpeed;
 
-		XMMATRIX world = XMMatrixRotationY(angle);
+		XMMATRIX world1 = XMMatrixRotationY(angle1);
+		XMMATRIX world2 = XMMatrixRotationY(angle2) * XMMatrixTranslation(2.0f, 0.0f, 0.0f);
 
 		XMMATRIX proj = XMMatrixPerspectiveFovLH(
 			XMConvertToRadians(m_fov),
 			aspect_ratio,
 			0.1f,
 			1000.0f);
-		XMMATRIX finalMatrix = world * view * proj;
 
-		XMMATRIX normalMatrix = XMMatrixInverse(nullptr, world);
+		XMMATRIX finalMatrix1 = world1 * view * proj;
+		XMMATRIX finalMatrix2 = world2 * view * proj;
 
-		FrameConstants constants = {};
-		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(finalMatrix));
-		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
-		XMStoreFloat4x4(&constants.normal, normalMatrix);
+		XMMATRIX normalMatrix1 = XMMatrixInverse(nullptr, world1);
+		XMMATRIX normalMatrix2 = XMMatrixInverse(nullptr, world2);
 
-		XMStoreFloat3(&constants.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
+		PerFrameConstants frameConstants = {};
+		XMStoreFloat3(&frameConstants.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
 
-		XMStoreFloat4(&constants.cubeColor, XMVectorSet(cubeColor.x, cubeColor.y, cubeColor.z, cubeColor.z));
-		XMStoreFloat(&constants.specularIntensity, XMVectorSet(specularIntensity, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat(&constants.smoothness, XMVectorSet(smoothness, 0.0f, 0.0f, 0.0f));
-
-		XMStoreFloat3(&constants.ambientColor, XMVectorSet(al.color.x, al.color.y, al.color.z, 0.0f));
-		XMStoreFloat(&constants.ambientIntensity, XMVectorSet(al.intensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat3(&frameConstants.ambientColor, XMVectorSet(al.color.x, al.color.y, al.color.z, 0.0f));
+		XMStoreFloat(&frameConstants.ambientIntensity, XMVectorSet(al.intensity, 0.0f, 0.0f, 0.0f));
 		
-		XMStoreFloat3(&constants.lightColor, XMVectorSet(dl.color.x, dl.color.y, dl.color.z, 0.0f));
-		XMStoreFloat3(&constants.lightDirection, XMVectorSet(dl.direction.x, dl.direction.y, dl.direction.z, 0.0f));
+		XMStoreFloat3(&frameConstants.lightColor, XMVectorSet(dl.color.x, dl.color.y, dl.color.z, 0.0f));
+		XMStoreFloat3(&frameConstants.lightDirection, XMVectorSet(dl.direction.x, dl.direction.y, dl.direction.z, 0.0f));
 
-		XMStoreFloat3(&constants.pLightPosition, XMVectorSet(pl.position.x, pl.position.y, pl.position.z, 0.0f));
-		XMStoreFloat3(&constants.pColor, XMVectorSet(pl.color.x, pl.color.y, pl.color.z, 0.0f));
-		XMStoreFloat(&constants.pIntensity, XMVectorSet(pl.intensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat3(&frameConstants.pLightPosition, XMVectorSet(pl.position.x, pl.position.y, pl.position.z, 0.0f));
+		XMStoreFloat3(&frameConstants.pColor, XMVectorSet(pl.color.x, pl.color.y, pl.color.z, 0.0f));
+		XMStoreFloat(&frameConstants.pIntensity, XMVectorSet(pl.intensity, 0.0f, 0.0f, 0.0f));
+
+		PerObjectConstants firstObjectConstants = {};
+		XMStoreFloat4x4(&firstObjectConstants.transform, XMMatrixTranspose(finalMatrix1));
+		XMStoreFloat4x4(&firstObjectConstants.world, XMMatrixTranspose(world1));
+		XMStoreFloat4x4(&firstObjectConstants.normal, normalMatrix1);
+
+		XMStoreFloat4(&firstObjectConstants.cubeColor, XMVectorSet(firstCubeColor.x, firstCubeColor.y, firstCubeColor.z, firstCubeColor.w));
+		XMStoreFloat(&firstObjectConstants.specularIntensity, XMVectorSet(firstCubeSpecularIntensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&firstObjectConstants.smoothness, XMVectorSet(firstCubeSmoothness, 0.0f, 0.0f, 0.0f));
+
+		PerObjectConstants secondObjectConstants = {};
+		XMStoreFloat4x4(&secondObjectConstants.transform, XMMatrixTranspose(finalMatrix2));
+		XMStoreFloat4x4(&secondObjectConstants.world, XMMatrixTranspose(world2));
+		XMStoreFloat4x4(&secondObjectConstants.normal, normalMatrix2);
+
+		XMStoreFloat4(&secondObjectConstants.cubeColor, XMVectorSet(secondCubeColor.x, secondCubeColor.y, secondCubeColor.z, secondCubeColor.w));
+		XMStoreFloat(&secondObjectConstants.specularIntensity, XMVectorSet(secondCubeSpecularIntensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&secondObjectConstants.smoothness, XMVectorSet(secondCubeSmoothness, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-		memcpy(mapped.pData, &constants, sizeof(constants));
-		m_context->Unmap(m_constantBuffer.Get(), 0);
+		m_context->Map(m_perFrameBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &frameConstants, sizeof(frameConstants));
+		m_context->Unmap(m_perFrameBuffer.Get(), 0);
 
-		m_context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
-		m_context->PSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &firstObjectConstants, sizeof(firstObjectConstants));
+		m_context->Unmap(m_perObjectBuffer.Get(), 0);
 
-		UINT stride = sizeof(Vertex);
-		UINT offset = 0;
-
-		m_context->IASetInputLayout(m_inputLayout.Get());
-		m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
-		m_context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_context->VSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
+		m_context->PSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
+		m_context->VSSetConstantBuffers(1, 1, m_perObjectBuffer.GetAddressOf());
+		m_context->PSSetConstantBuffers(1, 1, m_perObjectBuffer.GetAddressOf());
 
 		m_context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
 		m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
-		m_context->DrawIndexed(m_indexCount, 0, 0);
+		m_context->IASetInputLayout(m_inputLayout.Get());
+
+		m_cubeMesh->Bind(m_context.Get());
+		m_context->DrawIndexed(m_cubeMesh->IndexCount(), 0, 0);
+
+		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &secondObjectConstants, sizeof(secondObjectConstants));
+		m_context->Unmap(m_perObjectBuffer.Get(), 0);
+
+		m_cubeMesh->Bind(m_context.Get());
+		m_context->DrawIndexed(m_cubeMesh->IndexCount(), 0, 0);
 	}
 
 	void Renderer::EndFrame() 
@@ -348,35 +401,23 @@ namespace EnvironmentalEngine{
 			10, 19,  7,		10, 22, 19,
 		};
 
-		D3D11_BUFFER_DESC ibd = {};
-		ibd.ByteWidth = sizeof(indices);
-		ibd.Usage = D3D11_USAGE_DEFAULT;
-		ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		m_cubeMesh = std::make_unique<Mesh>(m_device.Get(), vertices, sizeof(vertices) / sizeof(vertices[0]), indices, sizeof(indices) / sizeof(indices[0]));
 
-		D3D11_SUBRESOURCE_DATA iinit = {};
-		iinit.pSysMem = indices;
+		D3D11_BUFFER_DESC pfcbd = {};
+		pfcbd.ByteWidth = sizeof(PerFrameConstants);
+		pfcbd.Usage = D3D11_USAGE_DYNAMIC;
+		pfcbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		pfcbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-		Check(m_device->CreateBuffer(&ibd, &iinit, &m_indexBuffer));
-	    
-	    D3D11_BUFFER_DESC bd = {};
-	    bd.ByteWidth = sizeof(vertices);
-	    bd.Usage = D3D11_USAGE_DEFAULT;
-	    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	    
-	    D3D11_SUBRESOURCE_DATA init = {};
-	    init.pSysMem = vertices;
+		Check(m_device->CreateBuffer(&pfcbd, nullptr, &m_perFrameBuffer));
 
-		Check(m_device->CreateBuffer(&bd, &init, &m_vertexBuffer));
-
-		m_indexCount = sizeof(indices) / sizeof(indices[0]);
-
-		D3D11_BUFFER_DESC cbd = {};
-		cbd.ByteWidth = sizeof(FrameConstants);
-		cbd.Usage = D3D11_USAGE_DYNAMIC;
-		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-		Check(m_device->CreateBuffer(&cbd, nullptr, &m_constantBuffer));
+		D3D11_BUFFER_DESC pocbd = {};
+		pocbd.ByteWidth = sizeof(PerObjectConstants);
+		pocbd.Usage = D3D11_USAGE_DYNAMIC;
+		pocbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		pocbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		
+		Check(m_device->CreateBuffer(&pocbd, nullptr, &m_perObjectBuffer));
 
 		std::wstring shaderPath = ExeDir() + L"Triangle.hlsl";
 
