@@ -6,6 +6,7 @@
 #include <DirectXMath.h>
 #include <Lights.h>
 #include "Mesh.h"
+#include "MeshRenderer.h"
 #include <memory>
 
 namespace EnvironmentalEngine {
@@ -21,6 +22,10 @@ namespace EnvironmentalEngine {
 		void EndFrame();   
 
 		void Resize(int width, int height);
+
+		void Draw(const MeshRenderer& mr);
+
+		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
 	
 	private:
 		Microsoft::WRL::ComPtr<ID3D11Device> m_device;
@@ -41,6 +46,9 @@ namespace EnvironmentalEngine {
 
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthTex;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthView;
+
+		DirectX::XMMATRIX m_viewMatrix;
+		DirectX::XMMATRIX m_projMatrix;
 
 		float m_fov = 60.0f;
 	};

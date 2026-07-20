@@ -222,76 +222,21 @@ namespace EnvironmentalEngine{
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
 		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		static XMFLOAT4 firstCubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
-		static float firstCubeSpecularIntensity = 0.5f;
-		static float firstCubeSmoothness = 0.5f;
-		static float firstCubeSpinSpeed = 1.0f;
-
-		static XMFLOAT4 secondCubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
-		static float secondCubeSpecularIntensity = 0.5f;
-		static float secondCubeSmoothness = 0.5f;
-		static float secondCubeSpinSpeed = 1.0f;
-
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
 		ImGui::Begin("Environmental Engine");
-		if (ImGui::CollapsingHeader("Cube 1")){
-			ImGui::PushID(1);
-			ImGui::SliderFloat("Rotation speed", &firstCubeSpinSpeed, 0.0f, 10.0f);
-			ImGui::ColorPicker4("Cube color", &firstCubeColor.x);
-			ImGui::SliderFloat("Smoothness", &firstCubeSmoothness, 0.0f, 1.0f);
-			ImGui::SliderFloat("Metallicness", &firstCubeSpecularIntensity, 0.0f, 1.0f);
-			ImGui::PopID();
-		}
-		if (ImGui::CollapsingHeader("Cube 2")) {
-			ImGui::PushID(2);
-			ImGui::SliderFloat("Rotation speed", &secondCubeSpinSpeed, 0.0f, 10.0f);
-			ImGui::ColorPicker4("Cube color", &secondCubeColor.x);
-			ImGui::SliderFloat("Smoothness", &secondCubeSmoothness, 0.0f, 1.0f);
-			ImGui::SliderFloat("Metallicness", &secondCubeSpecularIntensity, 0.0f, 1.0f);
-			ImGui::PopID();
-		}
-		if (ImGui::CollapsingHeader("Ambient light")) {
-			ImGui::ColorPicker3("color", &al.color.x);
-			ImGui::SliderFloat("intensity", &al.intensity, 0.0f, 1.0f);
-		}
-		if(ImGui::CollapsingHeader("Directional Light")){
-			ImGui::SliderFloat3("direction", &dl.direction.x, -1.0f, 1.0f);
-			ImGui::ColorPicker3("color", &dl.color.x);
-		}
-		if (ImGui::CollapsingHeader("Point light")) {
-			ImGui::ColorPicker3("Color", &pl.color.x);
-			ImGui::SliderFloat3("Position", &pl.position.x, -10.0f, 10.0f);
-			ImGui::SliderFloat("Intensity", &pl.intensity ,0.0f, 1.0f);
-		}
+	
 
 		ImGui::End();
 
-		float radPitch = XMConvertToRadians(pitch);
-		float radYaw = XMConvertToRadians(yaw);
-		
-		static float angle1 = 0.0f;
-		static float angle2 = 0.0f;
-
-		angle1 += deltaTime * firstCubeSpinSpeed;
-		angle2 += deltaTime * secondCubeSpinSpeed;
-
-		XMMATRIX world1 = XMMatrixRotationY(angle1);
-		XMMATRIX world2 = XMMatrixRotationY(angle2) * XMMatrixTranslation(2.0f, 0.0f, 0.0f);
-
-		XMMATRIX proj = XMMatrixPerspectiveFovLH(
+		m_viewMatrix = view;
+		m_projMatrix = XMMatrixPerspectiveFovLH(
 			XMConvertToRadians(m_fov),
 			aspect_ratio,
 			0.1f,
 			1000.0f);
-
-		XMMATRIX finalMatrix1 = world1 * view * proj;
-		XMMATRIX finalMatrix2 = world2 * view * proj;
-
-		XMMATRIX normalMatrix1 = XMMatrixInverse(nullptr, world1);
-		XMMATRIX normalMatrix2 = XMMatrixInverse(nullptr, world2);
 
 		PerFrameConstants frameConstants = {};
 		XMStoreFloat3(&frameConstants.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
@@ -306,32 +251,10 @@ namespace EnvironmentalEngine{
 		XMStoreFloat3(&frameConstants.pColor, XMVectorSet(pl.color.x, pl.color.y, pl.color.z, 0.0f));
 		XMStoreFloat(&frameConstants.pIntensity, XMVectorSet(pl.intensity, 0.0f, 0.0f, 0.0f));
 
-		PerObjectConstants firstObjectConstants = {};
-		XMStoreFloat4x4(&firstObjectConstants.transform, XMMatrixTranspose(finalMatrix1));
-		XMStoreFloat4x4(&firstObjectConstants.world, XMMatrixTranspose(world1));
-		XMStoreFloat4x4(&firstObjectConstants.normal, normalMatrix1);
-
-		XMStoreFloat4(&firstObjectConstants.cubeColor, XMVectorSet(firstCubeColor.x, firstCubeColor.y, firstCubeColor.z, firstCubeColor.w));
-		XMStoreFloat(&firstObjectConstants.specularIntensity, XMVectorSet(firstCubeSpecularIntensity, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat(&firstObjectConstants.smoothness, XMVectorSet(firstCubeSmoothness, 0.0f, 0.0f, 0.0f));
-
-		PerObjectConstants secondObjectConstants = {};
-		XMStoreFloat4x4(&secondObjectConstants.transform, XMMatrixTranspose(finalMatrix2));
-		XMStoreFloat4x4(&secondObjectConstants.world, XMMatrixTranspose(world2));
-		XMStoreFloat4x4(&secondObjectConstants.normal, normalMatrix2);
-
-		XMStoreFloat4(&secondObjectConstants.cubeColor, XMVectorSet(secondCubeColor.x, secondCubeColor.y, secondCubeColor.z, secondCubeColor.w));
-		XMStoreFloat(&secondObjectConstants.specularIntensity, XMVectorSet(secondCubeSpecularIntensity, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat(&secondObjectConstants.smoothness, XMVectorSet(secondCubeSmoothness, 0.0f, 0.0f, 0.0f));
-
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_perFrameBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &frameConstants, sizeof(frameConstants));
 		m_context->Unmap(m_perFrameBuffer.Get(), 0);
-
-		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-		memcpy(mapped.pData, &firstObjectConstants, sizeof(firstObjectConstants));
-		m_context->Unmap(m_perObjectBuffer.Get(), 0);
 
 		m_context->VSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
 		m_context->PSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
@@ -342,12 +265,31 @@ namespace EnvironmentalEngine{
 		m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
 		m_context->IASetInputLayout(m_inputLayout.Get());
+	}
 
-		m_cubeMesh->Bind(m_context.Get());
-		m_context->DrawIndexed(m_cubeMesh->IndexCount(), 0, 0);
+	void Renderer::Draw(const MeshRenderer& mr) 
+	{
+		XMMATRIX world =
+			XMMatrixScaling(mr.scale.x, mr.scale.y, mr.scale.z) *
+			XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(mr.rotation.x), DirectX::XMConvertToRadians(mr.rotation.y), DirectX::XMConvertToRadians(mr.rotation.z)) *
+			XMMatrixTranslation(mr.position.x, mr.position.y, mr.position.z);
 
+		XMMATRIX final = world * m_viewMatrix * m_projMatrix;
+
+		XMMATRIX normal = XMMatrixInverse(nullptr, world);
+
+		PerObjectConstants constants = {};
+		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(final));
+		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
+		XMStoreFloat4x4(&constants.normal, normal);
+
+		XMStoreFloat4(&constants.cubeColor, XMVectorSet(mr.color.x, mr.color.y, mr.color.z, 0.0f));
+		XMStoreFloat(&constants.specularIntensity, XMVectorSet(mr.specularIntensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&constants.smoothness, XMVectorSet(mr.smoothness, 0.0f, 0.0f, 0.0f));
+
+		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-		memcpy(mapped.pData, &secondObjectConstants, sizeof(secondObjectConstants));
+		memcpy(mapped.pData, &constants, sizeof(constants));
 		m_context->Unmap(m_perObjectBuffer.Get(), 0);
 
 		m_cubeMesh->Bind(m_context.Get());

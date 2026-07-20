@@ -24,6 +24,15 @@ int main()
     AmbientLight al;
     PointLight pl;
 
+    MeshRenderer cubeOne;
+    cubeOne.color = { 1.0f, 0.0f, 0.0f };
+    cubeOne.position = { 0.0f, 0.0f, 1.0f };
+    cubeOne.rotation = { 55.0f, 25.0f, 120.0f };
+    cubeOne.scale = { 3.0f, 1.0f, 1.0f };
+    cubeOne.smoothness = 0.5f;
+    cubeOne.specularIntensity = 0.5f;
+    cubeOne.mesh = renderer.CubeMesh();
+
     while (window.ProccessMessages()) {
         Input& input = window.GetInput();
 		timer.Tick();
@@ -37,6 +46,7 @@ int main()
             camera.Rotate(deltaX, deltaY);
 
         renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
+        renderer.Draw(cubeOne);
         renderer.EndFrame();
     }
 
