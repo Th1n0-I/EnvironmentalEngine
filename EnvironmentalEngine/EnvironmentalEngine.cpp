@@ -2,6 +2,7 @@
 //
 
 #include <iostream>
+#include <vector>
 #include "Window.h"
 #include "Renderer.h"
 #include "Timer.h"
@@ -24,14 +25,26 @@ int main()
     AmbientLight al;
     PointLight pl;
 
-    MeshRenderer cubeOne;
-    cubeOne.color = { 1.0f, 0.0f, 0.0f };
-    cubeOne.position = { 0.0f, 0.0f, 1.0f };
-    cubeOne.rotation = { 55.0f, 25.0f, 120.0f };
-    cubeOne.scale = { 3.0f, 1.0f, 1.0f };
-    cubeOne.smoothness = 0.5f;
-    cubeOne.specularIntensity = 0.5f;
-    cubeOne.mesh = renderer.CubeMesh();
+    MeshRenderer cubeOne = {
+        "Cube",
+        renderer.CubeMesh(),
+        { 0.0f, 0.0f, 1.0f },
+        { 55.0f, 25.0f, 120.0f },
+        { 3.0f, 1.0f, 1.0f },
+        { 1.0f, 0.0f, 0.0f },
+        0.5f, 0.5f };
+
+    MeshRenderer cubeTwo = {
+        "other Cube",
+        renderer.CubeMesh(),
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        0.5f, 0.5f };
+
+    std::vector<MeshRenderer> mr = { cubeOne, cubeTwo };
+
 
     while (window.ProccessMessages()) {
         Input& input = window.GetInput();
@@ -46,7 +59,24 @@ int main()
             camera.Rotate(deltaX, deltaY);
 
         renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
-        renderer.Draw(cubeOne);
+
+        int id = 0;
+
+        for (MeshRenderer& meshRenderer : mr) {
+            ImGui::PushID(id);
+            if (ImGui::CollapsingHeader(meshRenderer.name.c_str())) {
+                ImGui::DragFloat3("Position", &meshRenderer.position.x, 0.1f);
+                ImGui::DragFloat3("Rotation", &meshRenderer.rotation.x, 1.0f);
+                ImGui::DragFloat3("Scale", &meshRenderer.scale.x, 0.1f);
+                ImGui::ColorPicker3("Color", &meshRenderer.color.x);
+                ImGui::DragFloat("Smoothness", &meshRenderer.smoothness, 0.01f, 0.0f, 1.0f);
+                ImGui::DragFloat("Specular intensity", &meshRenderer.specularIntensity, 0.01f, 0.0f, 1.0f);
+            }
+            renderer.Draw(meshRenderer);
+            ImGui::PopID();
+            id++;
+        }
+
         renderer.EndFrame();
     }
 

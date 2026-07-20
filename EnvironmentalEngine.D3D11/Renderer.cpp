@@ -229,7 +229,7 @@ namespace EnvironmentalEngine{
 		ImGui::Begin("Environmental Engine");
 	
 
-		ImGui::End();
+		
 
 		m_viewMatrix = view;
 		m_projMatrix = XMMatrixPerspectiveFovLH(
@@ -298,6 +298,7 @@ namespace EnvironmentalEngine{
 
 	void Renderer::EndFrame() 
     {
+		ImGui::End();
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 		m_swapChain->Present(0, 0);
