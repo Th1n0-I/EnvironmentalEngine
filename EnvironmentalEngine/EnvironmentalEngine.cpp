@@ -61,8 +61,18 @@ int main()
         renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
 
         int id = 0;
-
+        if (ImGui::Button("+")) {
+            mr.push_back(MeshRenderer{
+                "New Cube",
+                renderer.CubeMesh(),
+                {0.0f, 0.0f, 0.0f},
+                {0.0f, 0.0f, 0.0f},
+                {1.0f, 1.0f, 1.0f},
+                {0.5f, 0.5f, 0.5f},
+                0.5f, 0.5f });
+        }
         for (MeshRenderer& meshRenderer : mr) {
+            
             ImGui::PushID(id);
             if (ImGui::CollapsingHeader(meshRenderer.name.c_str())) {
                 ImGui::DragFloat3("Position", &meshRenderer.position.x, 0.1f);
