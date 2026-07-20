@@ -33,6 +33,12 @@ struct FrameConstants {
 	XMFLOAT3 camPos;
 	float padding0;
 	XMFLOAT4 cubeColor;
+	XMFLOAT3 ambientColor;
+	float ambientIntensity;
+	XMFLOAT3 lightColor;
+	float specularIntensity;
+	float smoothness;
+	float padding1[3];
 };
 
 struct Vertex
@@ -166,7 +172,7 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
 		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
         
-		CreateCube(XMFLOAT3(1,1,1));
+		CreateCube();
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -198,7 +204,12 @@ namespace EnvironmentalEngine{
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
 		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		static XMFLOAT4 cubeColor;
+		static XMFLOAT4 cubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
+		static XMFLOAT3 ambientColor;
+		static float ambientIntensity;
+		static XMFLOAT3 lightColor;
+		static float specularIntensity;
+		static float smoothness;
 
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
@@ -207,6 +218,13 @@ namespace EnvironmentalEngine{
 		ImGui::Begin("Environmental Engine");
 		if(ImGui::CollapsingHeader("Cube Color"))
 			ImGui::ColorPicker4("Cube color", &cubeColor.x);
+		if (ImGui::CollapsingHeader("Lighting")) {
+			ImGui::ColorPicker3("Ambient color", &ambientColor.x);
+			ImGui::SliderFloat("Ambient intensity", &ambientIntensity, 0.0f, 1.0f);
+			ImGui::ColorPicker3("Light color", &lightColor.x);
+			ImGui::SliderFloat("Specular intensity", &specularIntensity, 0.0f, 1.0f);
+			ImGui::SliderFloat("Smoothness", &smoothness, 0.0f, 1.0f);
+		}
 
 		ImGui::End();
 
@@ -232,8 +250,13 @@ namespace EnvironmentalEngine{
 		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(finalMatrix));
 		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&constants.normal, normalMatrix);
-		XMStoreFloat3(&constants.camPos, DirectX::XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
-		XMStoreFloat4(&constants.cubeColor, DirectX::XMVectorSet(cubeColor.x, cubeColor.y, cubeColor.z, cubeColor.z));
+		XMStoreFloat3(&constants.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
+		XMStoreFloat4(&constants.cubeColor, XMVectorSet(cubeColor.x, cubeColor.y, cubeColor.z, cubeColor.z));
+		XMStoreFloat3(&constants.ambientColor, XMVectorSet(ambientColor.x, ambientColor.y, ambientColor.z, 0.0f));
+		XMStoreFloat(&constants.ambientIntensity, XMVectorSet(ambientIntensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat3(&constants.lightColor, XMVectorSet(lightColor.x, lightColor.y, lightColor.z, 0.0f));
+		XMStoreFloat(&constants.specularIntensity, XMVectorSet(specularIntensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&constants.smoothness, XMVectorSet(smoothness, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -264,7 +287,7 @@ namespace EnvironmentalEngine{
 		m_swapChain->Present(0, 0);
 	}
 
-	void Renderer::CreateCube(XMFLOAT3 color)
+	void Renderer::CreateCube()
     {
 		Vertex vertices[] =
 		{//     x      y      z         nx     ny     nz

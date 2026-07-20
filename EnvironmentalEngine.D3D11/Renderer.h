@@ -25,7 +25,7 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rtv;
 	    
-	    void CreateCube(DirectX::XMFLOAT3 color);
+	    void CreateCube();
 	    
 	    Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_indexBuffer;

@@ -6,6 +6,12 @@ cbuffer FrameConstants : register(b0)
     float3 camPos;
     float padding0;
     float4 cubeColor;
+    float3 ambientColor;
+    float ambientIntensity;
+    float3 lightColor;
+    float specularIntensity;
+    float smoothness;
+    float padding1[3];
 };
 
 struct VSInput
@@ -37,8 +43,6 @@ float4 PSMain(VSOutput input) : SV_Target
 {
         float3 N = normalize(input.normal);
     
-        float4 ambientColor = float4(1.0f, 1.0f, 1.0f, 0.1f);
-        float4 lightColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
         float3 lightDir = normalize(float3(1.0f, 0.0f, 0.0f));
     
         float diff = max(dot(N, lightDir), 0.0);
@@ -46,12 +50,12 @@ float4 PSMain(VSOutput input) : SV_Target
         float3 viewDir = normalize(camPos - input.worldPos);
         float3 reflectedDir = reflect(-lightDir, N);
     
-        float spec = pow(max(dot(viewDir, reflectedDir), 0.0), 128.0);
+    float spec = pow(max(dot(viewDir, reflectedDir), 0.0), max(smoothness * 512, 1));
         spec *= step(0.0, dot(input.normal, lightDir));
     
-        float3 ambient = float3(ambientColor.rgb * ambientColor.a);
-        float3 diffuse = lightColor.rgb * diff * lightColor.a;
-        float3 specular = lightColor.rgb * spec * 0.5;
+        float3 ambient = float3(ambientColor.rgb * ambientIntensity);
+        float3 diffuse = lightColor.rgb * diff;
+        float3 specular = lightColor.rgb * spec * specularIntensity;
     
         return float4(cubeColor.rgb * (ambient + diffuse) + specular, 1.0);
     
