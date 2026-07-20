@@ -7,6 +7,7 @@
 #include "Timer.h"
 #include "Camera.h"
 #include "imgui/imgui.h"
+#include "Lights.h"
 
 int main()
 {
@@ -19,7 +20,7 @@ int main()
 
     Camera camera;
 
-    
+    DirectionalLight dl;
 
     while (window.ProccessMessages()) {
         Input& input = window.GetInput();
@@ -33,7 +34,7 @@ int main()
         if (!ImGui::GetIO().WantCaptureMouse)
             camera.Rotate(deltaX, deltaY);
 
-        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position);
+        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl);
         renderer.EndFrame();
     }
 

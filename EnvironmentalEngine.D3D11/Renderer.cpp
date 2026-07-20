@@ -6,6 +6,7 @@
 #include <d3dcompiler.h>
 #include <cmath>
 #include <DirectXMath.h>
+#include <Lights.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -38,7 +39,7 @@ struct FrameConstants {
 	XMFLOAT3 lightColor;
 	float specularIntensity;
 	float smoothness;
-	float padding1[3];
+	XMFLOAT3 lightDirection;
 };
 
 struct Vertex
@@ -188,7 +189,7 @@ namespace EnvironmentalEngine{
 		ImGui::DestroyContext();
 	}
 
-	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos) 
+	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos, DirectionalLight& dl) 
     {
 		static float pitch = 0.0f;
 		static float yaw = 0.0f;
@@ -207,7 +208,6 @@ namespace EnvironmentalEngine{
 		static XMFLOAT4 cubeColor = { 1.0f, 0.0f, 0.0f, 0.0f };
 		static XMFLOAT3 ambientColor;
 		static float ambientIntensity;
-		static XMFLOAT3 lightColor;
 		static float specularIntensity;
 		static float smoothness;
 
@@ -216,12 +216,17 @@ namespace EnvironmentalEngine{
 		ImGui::NewFrame();
 
 		ImGui::Begin("Environmental Engine");
-		if(ImGui::CollapsingHeader("Cube Color"))
+		if (ImGui::CollapsingHeader("Cube")){
+			ImGui::SliderFloat("Rotation speed", &m_spinSpeed, 0.0f, 10.0f);
 			ImGui::ColorPicker4("Cube color", &cubeColor.x);
-		if (ImGui::CollapsingHeader("Lighting")) {
+		}
+		if (ImGui::CollapsingHeader("Ambient light")) {
 			ImGui::ColorPicker3("Ambient color", &ambientColor.x);
 			ImGui::SliderFloat("Ambient intensity", &ambientIntensity, 0.0f, 1.0f);
-			ImGui::ColorPicker3("Light color", &lightColor.x);
+		}
+		if(ImGui::CollapsingHeader("Directional Light")){
+			ImGui::SliderFloat3("Light direction", &dl.direction.x, -1.0f, 1.0f);
+			ImGui::ColorPicker3("Light color", &dl.color.x);
 			ImGui::SliderFloat("Specular intensity", &specularIntensity, 0.0f, 1.0f);
 			ImGui::SliderFloat("Smoothness", &smoothness, 0.0f, 1.0f);
 		}
@@ -254,9 +259,10 @@ namespace EnvironmentalEngine{
 		XMStoreFloat4(&constants.cubeColor, XMVectorSet(cubeColor.x, cubeColor.y, cubeColor.z, cubeColor.z));
 		XMStoreFloat3(&constants.ambientColor, XMVectorSet(ambientColor.x, ambientColor.y, ambientColor.z, 0.0f));
 		XMStoreFloat(&constants.ambientIntensity, XMVectorSet(ambientIntensity, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat3(&constants.lightColor, XMVectorSet(lightColor.x, lightColor.y, lightColor.z, 0.0f));
+		XMStoreFloat3(&constants.lightColor, XMVectorSet(dl.color.x, dl.color.y, dl.color.z, 0.0f));
 		XMStoreFloat(&constants.specularIntensity, XMVectorSet(specularIntensity, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&constants.smoothness, XMVectorSet(smoothness, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat3(&constants.lightDirection, XMVectorSet(dl.direction.x, dl.direction.y, dl.direction.z, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);

@@ -4,6 +4,7 @@
 #include <wrl/client.h>
 #include <Camera.h>
 #include <DirectXMath.h>
+#include <Lights.h>
 
 namespace EnvironmentalEngine {
 	class Renderer {
@@ -14,7 +15,7 @@ namespace EnvironmentalEngine {
 		Renderer(const Renderer&) = delete;
 		Renderer& operator = (const Renderer&) = delete;
 
-		void BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos);
+		void BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos, DirectionalLight& dl);
 		void EndFrame();   
 
 		void Resize(int width, int height);

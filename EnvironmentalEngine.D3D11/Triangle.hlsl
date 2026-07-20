@@ -11,7 +11,7 @@ cbuffer FrameConstants : register(b0)
     float3 lightColor;
     float specularIntensity;
     float smoothness;
-    float padding1[3];
+    float3 lightDirection;
 };
 
 struct VSInput
@@ -43,7 +43,7 @@ float4 PSMain(VSOutput input) : SV_Target
 {
         float3 N = normalize(input.normal);
     
-        float3 lightDir = normalize(float3(1.0f, 0.0f, 0.0f));
+        float3 lightDir = normalize(-lightDirection);
     
         float diff = max(dot(N, lightDir), 0.0);
     
