@@ -27,11 +27,15 @@ int main()
     AmbientLight al;
     PointLight pl;
 
-    GameObject object = {};
-    object.name = "Mango";
-    object.transform = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
-    MeshRenderer* mr = object.AddComponent<MeshRenderer>();
+    std::vector<std::unique_ptr<GameObject>> objects = {};
+
+    auto object1 = std::make_unique<GameObject>();
+    object1->name = "Mango";
+    object1->transform = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
+    MeshRenderer* mr = object1->AddComponent<MeshRenderer>();
     mr->mesh = renderer.CubeMesh();
+
+    objects.push_back(std::move(object1));
 
     while (window.ProccessMessages()) {
         Input& input = window.GetInput();
@@ -47,26 +51,36 @@ int main()
 
         renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
 
-        
-        std::string header = object.name + "###obj";
-        if(ImGui::CollapsingHeader(header.c_str()))
-        {
-            ImGui::InputText("Name", &object.name);
+        for (size_t i = 0; i < objects.size(); i++ ) {
+            GameObject& go = *objects[i];
 
-            ImGui::DragFloat3("position", &object.transform.position.x, 0.1f);
-            ImGui::DragFloat3("rotation", &object.transform.rotation.x, 0.1f);
-            ImGui::DragFloat3("scale", &object.transform.scale.x, 0.1f);
+            ImGui::PushID(i);
 
-            if (MeshRenderer* mr = object.GetComponent<MeshRenderer>()) {
-                if (ImGui::CollapsingHeader(mr->TypeName())) {
-                    ImGui::ColorPicker3("Color", &mr->color.x);
-                    ImGui::DragFloat("Smoothness", &mr->smoothness, 0.01f, 0.0f, 1.0f);
-                    ImGui::DragFloat("Specular Intensity", &mr->specularIntensity, 0.01f, 0.0f, 1.0f);
+            std::string header = go.name + "###obj";
+            if (ImGui::CollapsingHeader(header.c_str()))
+            {
+                ImGui::InputText("Name", &go.name);
+
+                ImGui::DragFloat3("position", &go.transform.position.x, 0.1f);
+                ImGui::DragFloat3("rotation", &go.transform.rotation.x, 0.1f);
+                ImGui::DragFloat3("scale", &go.transform.scale.x, 0.1f);
+
+                if (MeshRenderer* mr = go.GetComponent<MeshRenderer>()) {
+                    if (ImGui::CollapsingHeader(mr->TypeName())) {
+                        ImGui::ColorPicker3("Color", &mr->color.x);
+                        ImGui::DragFloat("Smoothness", &mr->smoothness, 0.01f, 0.0f, 1.0f);
+                        ImGui::DragFloat("Specular Intensity", &mr->specularIntensity, 0.01f, 0.0f, 1.0f);
+                    }
                 }
             }
+
+            ImGui::PopID();
+
+            renderer.Draw(*go.GetComponent<MeshRenderer>(), go.transform);
         }
 
-        renderer.Draw(*object.GetComponent<MeshRenderer>(), object.transform);
+        
+        
 
         renderer.EndFrame();
     }
