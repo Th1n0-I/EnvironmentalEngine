@@ -195,6 +195,7 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
         
 		CreateCube();
+		CreatePlanet(1, 32);
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -354,7 +355,7 @@ namespace EnvironmentalEngine{
 		std::vector<UINT> sIndices;
 		UINT stackAmount = 16;
 		UINT sliceAmount = 16;
-		float r = 2.0f;
+		float r = 1.0f;
 
 		for (int stack = 0; stack <= stackAmount; stack++) {
 			float phi = PI * static_cast<float>(stack) / static_cast<float>(stackAmount);
@@ -422,4 +423,56 @@ namespace EnvironmentalEngine{
 			&m_inputLayout
 		));
     }
+
+	void Renderer::CreatePlanet(float radius, UINT res) {
+
+		std::vector<Vertex> vertices;
+		std::vector<UINT> indices;
+		
+		XMFLOAT3 localUp[6] = { 
+			{  0.0f,  1.0f,  0.0f }, 
+			{  0.0f, -1.0f,  0.0f }, 
+			{  1.0f,  0.0f,  0.0f }, 
+			{ -1.0f,  0.0f,  0.0f }, 
+			{  0.0f,  0.0f,  1.0f }, 
+			{  0.0f,  0.0f, -1.0f } };
+		XMFLOAT3 axisA[6] = {};
+		XMFLOAT3 axisB[6] = {};
+
+		for (int s = 0; s < 6; s++){
+			axisA[s] = { localUp[s].y, localUp[s].z, localUp[s].x };
+			XMVECTOR cross = XMVector3Cross(XMVectorSet(localUp[s].x, localUp[s].y, localUp[s].z, 0.0f), XMVectorSet(axisA[s].x, axisA[s].y, axisA[s].z, 0.0f));
+			XMStoreFloat3(&axisB[s], cross);
+			for (int x = 0; x < res; x++) {
+				for (int y = 0; y < res; y++) {
+					XMFLOAT2 percent = { x / (res - 1.0f), y / (res - 1.0f)};
+					XMVECTOR cubePos = XMVectorSet(localUp[s].x, localUp[s].y, localUp[s].z, 0.0f) +
+						(percent.x - 0.5f) * 2.0f * XMVectorSet(axisA[s].x, axisA[s].y, axisA[s].z, 0.0f) +
+						(percent.y - 0.5f) * 2.0f * XMVectorSet(axisB[s].x, axisB[s].y, axisB[s].z, 0.0f);
+					
+					XMFLOAT3 spherePos;
+					XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
+					vertices.push_back({ spherePos.x * radius, spherePos.y * radius, spherePos.z * radius, spherePos.x, spherePos.y, spherePos.z });
+				}
+			}
+		}
+
+		for (int s = 0; s < 6; s++) {
+			for (int x = 0; x < res - 1; x++) {
+				for (int y = 0; y < res - 1; y++) {
+					int i = x + y * res + s * res * res;
+					indices.push_back(i);
+					indices.push_back(i + res);
+					indices.push_back(i + res + 1);
+
+					indices.push_back(i);
+					indices.push_back(i + res + 1);
+					indices.push_back(i + 1);
+				}
+			}
+		}
+
+		m_planetMesh = std::make_unique<Mesh>(m_device.Get(), vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
+	}
 }
+

@@ -28,7 +28,8 @@ namespace EnvironmentalEngine {
 
 		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
 		Mesh* SphereMesh() const { return m_sphereMesh.get(); }
-	
+		Mesh* PlanetMesh() const { return m_planetMesh.get(); }
+
 	private:
 		Microsoft::WRL::ComPtr<ID3D11Device> m_device;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
@@ -36,9 +37,11 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rtv;
 	    
 	    void CreateCube();
+		void CreatePlanet(float radius, UINT res);
 	    
 		std::unique_ptr<Mesh> m_cubeMesh;
 		std::unique_ptr<Mesh> m_sphereMesh;
+		std::unique_ptr<Mesh> m_planetMesh;
 	    
 	    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
 	    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
