@@ -1,18 +1,18 @@
 #pragma once
 
 #include "Mesh.h"
+#include "Component.h"
 #include <DirectXMath.h>
 #include <string>
 
 namespace EnvironmentalEngine {
-	struct MeshRenderer {
-		std::string name;
-		Mesh* mesh;
-		DirectX::XMFLOAT3 position;
-		DirectX::XMFLOAT3 rotation;
-		DirectX::XMFLOAT3 scale;
-		DirectX::XMFLOAT3 color;
-		float smoothness;
-		float specularIntensity;
+	struct MeshRenderer : public Component {
+		const char* TypeName() const override { return "Mesh Renderer"; }
+
+
+		Mesh* mesh{ nullptr };
+		DirectX::XMFLOAT3 color{ 0.5f, 0.5f, 0.5f };
+		float smoothness{ 0.5f };
+		float specularIntensity{ 0.5f };
 	};
 }

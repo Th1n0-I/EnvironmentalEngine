@@ -7,6 +7,7 @@
 #include <Lights.h>
 #include "Mesh.h"
 #include "MeshRenderer.h"
+#include "GameObject.h"
 #include <memory>
 
 namespace EnvironmentalEngine {
@@ -23,7 +24,7 @@ namespace EnvironmentalEngine {
 
 		void Resize(int width, int height);
 
-		void Draw(const MeshRenderer& mr);
+		void Draw(const MeshRenderer& mr, const Transform& tr);
 
 		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
 		Mesh* SphereMesh() const { return m_sphereMesh.get(); }

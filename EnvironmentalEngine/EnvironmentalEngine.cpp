@@ -10,6 +10,7 @@
 #include "imgui/imgui.h"
 #include "Lights.h"
 #include "imgui/imgui_stdlib.h"
+#include "GameObject.h"
 
 int main()
 {
@@ -26,26 +27,11 @@ int main()
     AmbientLight al;
     PointLight pl;
 
-    MeshRenderer cubeOne = {
-        "Cube",
-        renderer.CubeMesh(),
-        { 0.0f, 0.0f, 1.0f },
-        { 55.0f, 25.0f, 120.0f },
-        { 3.0f, 1.0f, 1.0f },
-        { 1.0f, 0.0f, 0.0f },
-        0.5f, 0.5f };
-
-    MeshRenderer cubeTwo = {
-        "other Cube",
-        renderer.SphereMesh(),
-        {0.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f, 0.0f},
-        {1.0f, 1.0f, 1.0f},
-        {0.0f, 0.0f, 0.0f},
-        0.5f, 0.5f };
-
-    std::vector<MeshRenderer> mr = { cubeOne, cubeTwo };
-
+    GameObject object = {};
+    object.name = "Mango";
+    object.transform = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
+    MeshRenderer* mr = object.AddComponent<MeshRenderer>();
+    mr->mesh = renderer.CubeMesh();
 
     while (window.ProccessMessages()) {
         Input& input = window.GetInput();
@@ -61,35 +47,26 @@ int main()
 
         renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
 
-        int id = 0;
-        if (ImGui::Button("+")) {
-            mr.push_back(MeshRenderer{
-                "New Cube",
-                renderer.CubeMesh(),
-                {0.0f, 0.0f, 0.0f},
-                {0.0f, 0.0f, 0.0f},
-                {1.0f, 1.0f, 1.0f},
-                {0.5f, 0.5f, 0.5f},
-                0.5f, 0.5f });
-        }
-        for (MeshRenderer& meshRenderer : mr) {
+        
+        std::string header = object.name + "###obj";
+        if(ImGui::CollapsingHeader(header.c_str()))
+        {
+            ImGui::InputText("Name", &object.name);
 
-            std::string header = meshRenderer.name + "###" + std::to_string(id);
-            
-            ImGui::PushID(id);
-            if (ImGui::CollapsingHeader(header.c_str())) {
-                ImGui::InputText("Name", &meshRenderer.name);
-                ImGui::DragFloat3("Position", &meshRenderer.position.x, 0.1f);
-                ImGui::DragFloat3("Rotation", &meshRenderer.rotation.x, 1.0f);
-                ImGui::DragFloat3("Scale", &meshRenderer.scale.x, 0.1f);
-                ImGui::ColorPicker3("Color", &meshRenderer.color.x);
-                ImGui::DragFloat("Smoothness", &meshRenderer.smoothness, 0.01f, 0.0f, 1.0f);
-                ImGui::DragFloat("Specular intensity", &meshRenderer.specularIntensity, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat3("position", &object.transform.position.x, 0.1f);
+            ImGui::DragFloat3("rotation", &object.transform.rotation.x, 0.1f);
+            ImGui::DragFloat3("scale", &object.transform.scale.x, 0.1f);
+
+            if (MeshRenderer* mr = object.GetComponent<MeshRenderer>()) {
+                if (ImGui::CollapsingHeader(mr->TypeName())) {
+                    ImGui::ColorPicker3("Color", &mr->color.x);
+                    ImGui::DragFloat("Smoothness", &mr->smoothness, 0.01f, 0.0f, 1.0f);
+                    ImGui::DragFloat("Specular Intensity", &mr->specularIntensity, 0.01f, 0.0f, 1.0f);
+                }
             }
-            renderer.Draw(meshRenderer);
-            ImGui::PopID();
-            id++;
         }
+
+        renderer.Draw(*object.GetComponent<MeshRenderer>(), object.transform);
 
         renderer.EndFrame();
     }

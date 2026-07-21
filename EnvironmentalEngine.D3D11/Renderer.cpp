@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Renderer.h"
 #include "Mesh.h"
+#include "GameObject.h"
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx11.h"
 #include <stdexcept>
@@ -270,12 +271,12 @@ namespace EnvironmentalEngine{
 		m_context->IASetInputLayout(m_inputLayout.Get());
 	}
 
-	void Renderer::Draw(const MeshRenderer& mr) 
+	void Renderer::Draw(const MeshRenderer& mr, const Transform& tr) 
 	{
 		XMMATRIX world =
-			XMMatrixScaling(mr.scale.x, mr.scale.y, mr.scale.z) *
-			XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(mr.rotation.x), DirectX::XMConvertToRadians(mr.rotation.y), DirectX::XMConvertToRadians(mr.rotation.z)) *
-			XMMatrixTranslation(mr.position.x, mr.position.y, mr.position.z);
+			XMMatrixScaling(tr.scale.x, tr.scale.y, tr.scale.z) *
+			XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(tr.rotation.x), DirectX::XMConvertToRadians(tr.rotation.y), DirectX::XMConvertToRadians(tr.rotation.z)) *
+			XMMatrixTranslation(tr.position.x, tr.position.y, tr.position.z);
 
 		XMMATRIX final = world * m_viewMatrix * m_projMatrix;
 
@@ -351,8 +352,8 @@ namespace EnvironmentalEngine{
 
 		std::vector<Vertex> sVertices;
 		std::vector<UINT> sIndices;
-		UINT stackAmount = 128;
-		UINT sliceAmount = 128;
+		UINT stackAmount = 16;
+		UINT sliceAmount = 16;
 		float r = 2.0f;
 
 		for (int stack = 0; stack <= stackAmount; stack++) {
