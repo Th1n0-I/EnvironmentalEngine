@@ -29,27 +29,15 @@ int main()
 
     std::vector<std::unique_ptr<GameObject>> objects = {};
 
-    auto object1 = std::make_unique<GameObject>();
-    object1->name = "Mango";
-    object1->transform = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
-    MeshRenderer* mr1 = object1->AddComponent<MeshRenderer>();
-    mr1->mesh = renderer.CubeMesh();
-
-    auto object2 = std::make_unique<GameObject>();
-    object2->name = "Sigma";
-    object2->transform = { {2.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
-    MeshRenderer* mr2 = object2->AddComponent<MeshRenderer>();
-    mr2->mesh = renderer.SphereMesh();
+  
 
 
     auto object3 = std::make_unique<GameObject>();
     object3->name = "Sigma";
-    object3->transform = { {2.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
+    object3->transform = { {0.0f, -1000.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1000.0f, 1000.0f, 1000.0f} };
     MeshRenderer* mr3 = object3->AddComponent<MeshRenderer>();
     mr3->mesh = renderer.PlanetMesh();
 
-    objects.push_back(std::move(object1));
-    objects.push_back(std::move(object2));
     objects.push_back(std::move(object3));
 
     while (window.ProccessMessages()) {
@@ -65,6 +53,8 @@ int main()
             camera.Rotate(deltaX, deltaY);
 
         renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
+
+        ImGui::DragFloat("Move speed", &camera.moveSpeed, 0.4f);
 
         for (size_t i = 0; i < objects.size(); i++ ) {
             GameObject& go = *objects[i];

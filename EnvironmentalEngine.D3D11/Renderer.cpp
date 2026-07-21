@@ -4,6 +4,7 @@
 #include "GameObject.h"
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx11.h"
+#include "FastNoiseLite.h"
 #include <stdexcept>
 #include <d3dcompiler.h>
 #include <cmath>
@@ -426,6 +427,12 @@ namespace EnvironmentalEngine{
 
 	void Renderer::CreatePlanet(float radius, UINT res) {
 
+		FastNoiseLite noise;
+		noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+		noise.SetFractalOctaves(5);
+		noise.SetFrequency(0.5f);
+
 		std::vector<Vertex> vertices;
 		std::vector<UINT> indices;
 		
@@ -452,7 +459,10 @@ namespace EnvironmentalEngine{
 					
 					XMFLOAT3 spherePos;
 					XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
-					vertices.push_back({ spherePos.x * radius, spherePos.y * radius, spherePos.z * radius, spherePos.x, spherePos.y, spherePos.z });
+					float elevation = noise.GetNoise(spherePos.x, spherePos.y, spherePos.z);
+					float strength = 0.03f;
+					float h = radius + (1.0f * strength * elevation);
+					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, spherePos.x, spherePos.y, spherePos.z });
 				}
 			}
 		}
