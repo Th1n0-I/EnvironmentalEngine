@@ -242,7 +242,7 @@ namespace EnvironmentalEngine{
 			XMConvertToRadians(m_fov),
 			aspect_ratio,
 			0.1f,
-			1000.0f);
+			5000.0f);
 
 		PerFrameConstants frameConstants = {};
 		XMStoreFloat3(&frameConstants.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
@@ -460,9 +460,9 @@ namespace EnvironmentalEngine{
 					XMFLOAT3 spherePos;
 					XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
 					float elevation = noise.GetNoise(spherePos.x, spherePos.y, spherePos.z);
-					float strength = 0.03f;
-					float h = radius + (1.0f * strength * elevation);
-					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, spherePos.x, spherePos.y, spherePos.z });
+					float strength = 0.1f;
+					float h = radius + (1.0f * strength * max(elevation, 0.0f));
+					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f });
 				}
 			}
 		}
@@ -480,6 +480,27 @@ namespace EnvironmentalEngine{
 					indices.push_back(i + 1);
 				}
 			}
+		}
+
+		for (size_t t = 0; t < indices.size(); t+= 3) {
+			UINT ia = indices[t], ib = indices[t + 1], ic = indices[t + 2];
+
+			XMVECTOR a = XMVectorSet(vertices[ia].x, vertices[ia].y, vertices[ia].z, 0.0f);
+			XMVECTOR b = XMVectorSet(vertices[ib].x, vertices[ib].y, vertices[ib].z, 0.0f);
+			XMVECTOR c = XMVectorSet(vertices[ic].x, vertices[ic].y, vertices[ic].z, 0.0f);
+
+			XMVECTOR faceN = XMVector3Cross(b - a, c - a);
+			XMFLOAT3 fn; XMStoreFloat3(&fn, faceN);
+
+			vertices[ia].nx += fn.x; vertices[ia].ny += fn.y; vertices[ia].nz += fn.z;
+			vertices[ib].nx += fn.x; vertices[ib].ny += fn.y; vertices[ib].nz += fn.z;
+			vertices[ic].nx += fn.x; vertices[ic].ny += fn.y; vertices[ic].nz += fn.z;
+		}
+
+		for (auto& v : vertices) {
+			XMVECTOR n = XMVector3Normalize(XMVectorSet(v.nx, v.ny, v.nz, 0.0f));
+			XMFLOAT3 nf; XMStoreFloat3(&nf, n);
+			v.nx = nf.x; v.ny = nf.y; v.nz = nf.z;
 		}
 
 		m_planetMesh = std::make_unique<Mesh>(m_device.Get(), vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
