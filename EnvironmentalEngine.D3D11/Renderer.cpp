@@ -9,10 +9,13 @@
 #include <DirectXMath.h>
 #include <Lights.h>
 #include <memory>
+#include <vector>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
+
+const static float PI = 3.14159265358987;
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -292,8 +295,8 @@ namespace EnvironmentalEngine{
 		memcpy(mapped.pData, &constants, sizeof(constants));
 		m_context->Unmap(m_perObjectBuffer.Get(), 0);
 
-		m_cubeMesh->Bind(m_context.Get());
-		m_context->DrawIndexed(m_cubeMesh->IndexCount(), 0, 0);
+		mr.mesh->Bind(m_context.Get());
+		m_context->DrawIndexed(mr.mesh->IndexCount(), 0, 0);
 	}
 
 	void Renderer::EndFrame() 
@@ -345,6 +348,34 @@ namespace EnvironmentalEngine{
 		};
 
 		m_cubeMesh = std::make_unique<Mesh>(m_device.Get(), vertices, sizeof(vertices) / sizeof(vertices[0]), indices, sizeof(indices) / sizeof(indices[0]));
+
+		std::vector<Vertex> sVertices;
+		std::vector<UINT> sIndices;
+		float r = 2.0f;
+
+		for (int stack = 0; stack <= 16; stack++) {
+			float phi = PI * static_cast<float>(stack) / 16.0f;
+			for (int slice = 0; slice <= 16; slice++) {
+				float theta = 2.0f * PI * static_cast<float>(slice) / 16.0f;
+				float x = r * sin(phi) * cos(theta);
+				float y = r * cos(phi);
+				float z = r * sin(phi) * sin(theta);
+				sVertices.push_back({ x, y, z, x / r, y / r, z / r});
+			}
+		}
+
+		for (int stack = 0; stack < 16; stack++) {
+			for (int slice = 0; slice < 16; slice++) {
+				UINT a = stack * (16 + 1) + slice;
+				UINT b = a + 1;
+				UINT c = a + (16 + 1);
+				UINT d = c + 1;
+
+				sIndices.push_back(a); sIndices.push_back(b); sIndices.push_back(c); sIndices.push_back(b); sIndices.push_back(d); sIndices.push_back(c);
+			}
+		}
+
+		m_sphereMesh = std::make_unique<Mesh>(m_device.Get(), sVertices.data(), (UINT)sVertices.size(), sIndices.data(), (UINT)sIndices.size());
 
 		D3D11_BUFFER_DESC pfcbd = {};
 		pfcbd.ByteWidth = sizeof(PerFrameConstants);

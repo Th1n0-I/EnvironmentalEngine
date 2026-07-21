@@ -36,10 +36,10 @@ int main()
 
     MeshRenderer cubeTwo = {
         "other Cube",
-        renderer.CubeMesh(),
+        renderer.SphereMesh(),
         {0.0f, 0.0f, 0.0f},
         {0.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f, 0.0f},
+        {1.0f, 1.0f, 1.0f},
         {0.0f, 0.0f, 0.0f},
         0.5f, 0.5f };
 

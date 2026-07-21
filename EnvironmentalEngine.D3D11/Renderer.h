@@ -26,6 +26,7 @@ namespace EnvironmentalEngine {
 		void Draw(const MeshRenderer& mr);
 
 		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
+		Mesh* SphereMesh() const { return m_sphereMesh.get(); }
 	
 	private:
 		Microsoft::WRL::ComPtr<ID3D11Device> m_device;
@@ -36,6 +37,7 @@ namespace EnvironmentalEngine {
 	    void CreateCube();
 	    
 		std::unique_ptr<Mesh> m_cubeMesh;
+		std::unique_ptr<Mesh> m_sphereMesh;
 	    
 	    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
 	    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
