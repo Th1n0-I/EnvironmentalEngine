@@ -351,12 +351,14 @@ namespace EnvironmentalEngine{
 
 		std::vector<Vertex> sVertices;
 		std::vector<UINT> sIndices;
+		UINT stackAmount = 128;
+		UINT sliceAmount = 128;
 		float r = 2.0f;
 
-		for (int stack = 0; stack <= 16; stack++) {
-			float phi = PI * static_cast<float>(stack) / 16.0f;
-			for (int slice = 0; slice <= 16; slice++) {
-				float theta = 2.0f * PI * static_cast<float>(slice) / 16.0f;
+		for (int stack = 0; stack <= stackAmount; stack++) {
+			float phi = PI * static_cast<float>(stack) / static_cast<float>(stackAmount);
+			for (int slice = 0; slice <= sliceAmount; slice++) {
+				float theta = 2.0f * PI * static_cast<float>(slice) / static_cast<float>(sliceAmount);
 				float x = r * sin(phi) * cos(theta);
 				float y = r * cos(phi);
 				float z = r * sin(phi) * sin(theta);
@@ -364,11 +366,11 @@ namespace EnvironmentalEngine{
 			}
 		}
 
-		for (int stack = 0; stack < 16; stack++) {
-			for (int slice = 0; slice < 16; slice++) {
-				UINT a = stack * (16 + 1) + slice;
+		for (int stack = 0; stack < stackAmount; stack++) {
+			for (int slice = 0; slice < sliceAmount; slice++) {
+				UINT a = stack * (sliceAmount + 1) + slice;
 				UINT b = a + 1;
-				UINT c = a + (16 + 1);
+				UINT c = a + (sliceAmount + 1);
 				UINT d = c + 1;
 
 				sIndices.push_back(a); sIndices.push_back(b); sIndices.push_back(c); sIndices.push_back(b); sIndices.push_back(d); sIndices.push_back(c);

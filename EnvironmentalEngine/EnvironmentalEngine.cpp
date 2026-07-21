@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "imgui/imgui.h"
 #include "Lights.h"
+#include "imgui/imgui_stdlib.h"
 
 int main()
 {
@@ -72,9 +73,12 @@ int main()
                 0.5f, 0.5f });
         }
         for (MeshRenderer& meshRenderer : mr) {
+
+            std::string header = meshRenderer.name + "###" + std::to_string(id);
             
             ImGui::PushID(id);
-            if (ImGui::CollapsingHeader(meshRenderer.name.c_str())) {
+            if (ImGui::CollapsingHeader(header.c_str())) {
+                ImGui::InputText("Name", &meshRenderer.name);
                 ImGui::DragFloat3("Position", &meshRenderer.position.x, 0.1f);
                 ImGui::DragFloat3("Rotation", &meshRenderer.rotation.x, 1.0f);
                 ImGui::DragFloat3("Scale", &meshRenderer.scale.x, 0.1f);
