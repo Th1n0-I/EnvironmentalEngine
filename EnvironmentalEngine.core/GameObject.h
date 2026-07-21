@@ -16,8 +16,8 @@ namespace EnvironmentalEngine {
 
 	class GameObject {
 	public:
-		std::string name;
-		Transform transform;
+		std::string name{"GameObject"};
+		Transform transform{ {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f }, {1.0f, 1.0f, 1.0f} };
 
 		template<class T> T* AddComponent() { 
 			auto component = std::make_unique<T>();

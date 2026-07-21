@@ -64,11 +64,6 @@ struct PerObjectConstants {
 
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
 
-struct Vertex
-{
-    float x, y, z, nx, ny, nz;
-};
-
 std::wstring ExeDir()
 {
 	wchar_t path[MAX_PATH];
@@ -196,7 +191,7 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
         
 		CreateCube();
-		CreatePlanet(1, 32);
+		CreatePlanet(1, 128);
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -313,31 +308,31 @@ namespace EnvironmentalEngine{
 	void Renderer::CreateCube()
     {
 		Vertex vertices[] =
-		{//     x      y      z         nx     ny     nz
-			{ -0.5f, -0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f }, //0
-			{ -0.5f, -0.5f, -0.5f, 	   0.0f, -1.0f,  0.0f }, //1
-			{ -0.5f, -0.5f, -0.5f,     0.0f,  0.0f, -1.0f }, //2
-			{  0.5f, -0.5f, -0.5f,	   1.0f,  0.0f,  0.0f }, //3
-			{  0.5f, -0.5f, -0.5f,	   0.0f, -1.0f,  0.0f }, //4
-			{  0.5f, -0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //5
-			{  0.5f,  0.5f, -0.5f,	   1.0f,  0.0f,  0.0f }, //6
-			{  0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f }, //7
-			{  0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //8
-			{ -0.5f,  0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f }, //9
-			{ -0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f }, //10
-			{ -0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //11
-			{ -0.5f, -0.5f,  0.5f,    -1.0f,  0.0f,  0.0f }, //12 
-			{ -0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f }, //13
-			{ -0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //14
-			{  0.5f, -0.5f,  0.5f,	   1.0f,  0.0f,  0.0f }, //15
-			{  0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f }, //16
-			{  0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //17
-			{  0.5f,  0.5f,  0.5f,	   1.0f,  0.0f,  0.0f }, //18
-			{  0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f }, //19
-			{  0.5f,  0.5f,  0.5f,     0.0f,  0.0f,  1.0f }, //20
-			{ -0.5f,  0.5f,  0.5f,    -1.0f,  0.0f,  0.0f }, //21
-			{ -0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f }, //22
-			{ -0.5f,  0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //23
+		{//     x      y      z         nx     ny     nz  elevation
+			{ -0.5f, -0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f, -1.0f }, //0
+			{ -0.5f, -0.5f, -0.5f, 	   0.0f, -1.0f,  0.0f, -1.0f }, //1
+			{ -0.5f, -0.5f, -0.5f,     0.0f,  0.0f, -1.0f, -1.0f }, //2
+			{  0.5f, -0.5f, -0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //3
+			{  0.5f, -0.5f, -0.5f,	   0.0f, -1.0f,  0.0f, -1.0f }, //4
+			{  0.5f, -0.5f, -0.5f,	   0.0f,  0.0f, -1.0f, -1.0f }, //5
+			{  0.5f,  0.5f, -0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //6
+			{  0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //7
+			{  0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f, -1.0f }, //8
+			{ -0.5f,  0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f, -1.0f }, //9
+			{ -0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //10
+			{ -0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f, -1.0f }, //11
+			{ -0.5f, -0.5f,  0.5f,    -1.0f,  0.0f,  0.0f, -1.0f }, //12 
+			{ -0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f, -1.0f }, //13
+			{ -0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f, -1.0f }, //14
+			{  0.5f, -0.5f,  0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //15
+			{  0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f, -1.0f }, //16
+			{  0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f, -1.0f }, //17
+			{  0.5f,  0.5f,  0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //18
+			{  0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //19
+			{  0.5f,  0.5f,  0.5f,     0.0f,  0.0f,  1.0f, -1.0f }, //20
+			{ -0.5f,  0.5f,  0.5f,    -1.0f,  0.0f,  0.0f, -1.0f }, //21
+			{ -0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //22
+			{ -0.5f,  0.5f,  0.5f,	   0.0f,  0.0f,  1.0f, -1.0f }, //23
 		};
 
 		unsigned int indices[] =
@@ -365,7 +360,7 @@ namespace EnvironmentalEngine{
 				float x = r * sin(phi) * cos(theta);
 				float y = r * cos(phi);
 				float z = r * sin(phi) * sin(theta);
-				sVertices.push_back({ x, y, z, x / r, y / r, z / r});
+				sVertices.push_back({ x, y, z, x / r, y / r, z / r, -1.0f});
 			}
 		}
 
@@ -416,10 +411,11 @@ namespace EnvironmentalEngine{
 		D3D11_INPUT_ELEMENT_DESC layout[] = {
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"ELEVATION", 0, DXGI_FORMAT_R32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 			
 		Check(m_device->CreateInputLayout(
-			layout, 2,
+			layout, 3,
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			&m_inputLayout
 		));
@@ -462,7 +458,7 @@ namespace EnvironmentalEngine{
 					float elevation = noise.GetNoise(spherePos.x, spherePos.y, spherePos.z);
 					float strength = 0.1f;
 					float h = radius + (1.0f * strength * max(elevation, 0.0f));
-					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f });
+					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, elevation * 0.5f + 0.5f});
 				}
 			}
 		}

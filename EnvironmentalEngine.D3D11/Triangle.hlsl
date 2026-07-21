@@ -29,6 +29,7 @@ struct VSInput
 {
     float3 position : POSITION;      
     float3 normal : NORMAL;
+    float elevation : ELEVATION;
 };
 
 struct VSOutput
@@ -36,7 +37,28 @@ struct VSOutput
     float4 position : SV_POSITION;
     float3 worldPos : TEXCOORD0;
     float3 normal : NORMAL;
+    float elevation : ELEVATION;
 };
+
+float3 get_color_from_elevation(float elevation)
+{
+    
+    float e = saturate(elevation);
+    
+    float3 water = float3(0.467f, 0.678f, 0.878f);
+    float3 sand = float3(0.875f, 0.878f, 0.467f);
+    float3 grass = float3(0.11f, 0.49f, 0.2f);
+    float3 rock = float3(0.365f, 0.369f, 0.4f);
+    float3 snow = float3(0.918f, 0.925f, 0.961f);
+    
+    float3 finalColor = water;
+    finalColor = lerp(finalColor, sand, smoothstep(0.48f, 0.5f, e));
+    finalColor = lerp(finalColor, grass, smoothstep(0.5f, 0.54f, e));
+    finalColor = lerp(finalColor, rock, smoothstep(0.6f, 0.7f, e));
+    finalColor = lerp(finalColor, snow, smoothstep(0.88f, 0.95f, e));
+    
+    return finalColor;
+}
 
 VSOutput VSMain(VSInput input)
 {
@@ -47,11 +69,19 @@ VSOutput VSMain(VSInput input)
     output.position = mul(position, transform);
     output.worldPos = mul(position, world).xyz;
     output.normal = normalize(mul(float4(input.normal, 0.0), normal));
+    output.elevation = input.elevation;
     return output;
 }
 
 float4 PSMain(VSOutput input) : SV_Target
 {
+    float3 objectColor;
+    if (input.elevation < 0.0f)
+        objectColor = cubeColor.rgb;
+    else
+        objectColor = get_color_from_elevation(input.elevation);
+    
+    
     float3 N = normalize(input.normal);
     
     float3 lightDir = normalize(-lightDirection);
@@ -78,8 +108,7 @@ float4 PSMain(VSOutput input) : SV_Target
     float3 diffuse = lightColor.rgb * diff;
     float3 specular = lightColor.rgb * spec * specularIntensity;
     
-    return float4(
-    (cubeColor.rgb * (ambient + diffuse) + specular) + (cubeColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff
-    , 1.0);
     
+    return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff
+    , 1.0);
 }

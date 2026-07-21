@@ -23,14 +23,16 @@ int main()
 
     Camera camera;
 
-    DirectionalLight dl;
-    AmbientLight al;
-    PointLight pl;
+    
 
     std::vector<std::unique_ptr<GameObject>> objects = {};
 
   
-
+    auto lightObject = std::make_unique<GameObject>();
+    lightObject->name = "Lights";
+    DirectionalLight* dl1 = lightObject->AddComponent<DirectionalLight>();
+    AmbientLight* al1 = lightObject->AddComponent<AmbientLight>();;
+    PointLight* pl1 = lightObject->AddComponent<PointLight>();;
 
     auto object3 = std::make_unique<GameObject>();
     object3->name = "Sigma";
@@ -38,6 +40,7 @@ int main()
     MeshRenderer* mr3 = object3->AddComponent<MeshRenderer>();
     mr3->mesh = renderer.PlanetMesh();
 
+    objects.push_back(std::move(lightObject));
     objects.push_back(std::move(object3));
 
     while (window.ProccessMessages()) {
@@ -52,7 +55,10 @@ int main()
         if (!ImGui::GetIO().WantCaptureMouse)
             camera.Rotate(deltaX, deltaY);
 
-        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position, dl, al, pl);
+        renderer.BeginFrame(window.Width(), window.Height(), timer.DeltaTime(), camera.GetViewMatrix(), camera.position,
+            *dl1,
+            *al1,
+            *pl1);
 
         ImGui::DragFloat("Move speed", &camera.moveSpeed, 0.4f);
 
@@ -77,11 +83,34 @@ int main()
                         ImGui::DragFloat("Specular Intensity", &mr->specularIntensity, 0.01f, 0.0f, 1.0f);
                     }
                 }
+
+                if (AmbientLight* al = go.GetComponent<AmbientLight>()) {
+                    if (ImGui::CollapsingHeader(al->TypeName())) {
+                        ImGui::ColorPicker3("Color", &al->color.x);
+                        ImGui::DragFloat("intensity", &al->intensity, 0.01f, 0.0f, 1.0f);
+                    }
+                }
+
+                if (DirectionalLight* dl = go.GetComponent<DirectionalLight>()) {
+                    if (ImGui::CollapsingHeader(dl->TypeName())) {
+                        ImGui::ColorPicker3("Color", &dl->color.x);
+                        ImGui::DragFloat3("Direction", &dl->direction.x);
+                        ImGui::DragFloat("intensity", &dl->intensity, 0.01f, 0.0f, 1.0f);
+                    }
+                }
+
+                if (PointLight* pl = go.GetComponent<PointLight>()) {
+                    if (ImGui::CollapsingHeader(pl->TypeName())) {
+                        ImGui::ColorPicker3("Color", &pl->color.x);
+                        ImGui::DragFloat3("Direction", &pl->position.x);
+                        ImGui::DragFloat("intensity", &pl->intensity, 0.01f, 0.0f, 1.0f);
+                    }
+                }
             }
 
             ImGui::PopID();
-
-            renderer.Draw(*go.GetComponent<MeshRenderer>(), go.transform);
+            if(MeshRenderer* mr = go.GetComponent<MeshRenderer>())
+                renderer.Draw(*mr, go.transform);
         }
 
         

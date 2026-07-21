@@ -7,7 +7,7 @@ namespace EnvironmentalEngine {
 
 	struct Vertex
 	{
-		float x, y, z, nx, ny, nz;
+		float x, y, z, nx, ny, nz, elevation;
 	};
 
 	class Mesh {
