@@ -45,17 +45,19 @@ float3 get_color_from_elevation(float elevation)
     
     float e = saturate(elevation);
     
+    float3 deepWater = float3(0.043f, 0.106f, 0.42f);
     float3 water = float3(0.467f, 0.678f, 0.878f);
     float3 sand = float3(0.875f, 0.878f, 0.467f);
     float3 grass = float3(0.11f, 0.49f, 0.2f);
     float3 rock = float3(0.365f, 0.369f, 0.4f);
     float3 snow = float3(0.918f, 0.925f, 0.961f);
     
-    float3 finalColor = water;
+    float3 finalColor = deepWater;
+    finalColor = lerp(finalColor, water, smoothstep(0.0f, 0.28f, e));
     finalColor = lerp(finalColor, sand, smoothstep(0.48f, 0.5f, e));
-    finalColor = lerp(finalColor, grass, smoothstep(0.5f, 0.54f, e));
-    finalColor = lerp(finalColor, rock, smoothstep(0.6f, 0.7f, e));
-    finalColor = lerp(finalColor, snow, smoothstep(0.88f, 0.95f, e));
+    finalColor = lerp(finalColor, grass, smoothstep(0.5f, 0.6f, e));
+    finalColor = lerp(finalColor, rock, smoothstep(0.64f, 0.7f, e));
+    finalColor = lerp(finalColor, snow, smoothstep(0.95f, 0.96f, e));
     
     return finalColor;
 }

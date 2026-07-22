@@ -12,6 +12,8 @@
 #include <Lights.h>
 #include <memory>
 #include <vector>
+#include <map>
+#include <tuple>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -63,6 +65,17 @@ struct PerObjectConstants {
 };
 
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
+
+float clamp(float v, float minValue, float maxValue) {
+	return max(min(v, maxValue), minValue);
+}
+
+float smoothstep(float edge0, float edge1, float x) {
+
+	x = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+
+	return x * x * (3 - 2 * x);
+}
 
 std::wstring ExeDir()
 {
@@ -191,7 +204,7 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
         
 		CreateCube();
-		CreatePlanet(1, 128);
+		CreatePlanet(1, 248);
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -423,11 +436,19 @@ namespace EnvironmentalEngine{
 
 	void Renderer::CreatePlanet(float radius, UINT res) {
 
-		FastNoiseLite noise;
-		noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-		noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-		noise.SetFractalOctaves(5);
-		noise.SetFrequency(0.5f);
+		FastNoiseLite mtnN;
+		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		mtnN.SetFractalType(FastNoiseLite::FractalType_Ridged);
+		mtnN.SetFractalOctaves(5);
+		mtnN.SetFrequency(1.8f);
+		mtnN.SetFractalGain(0.5f);
+
+		FastNoiseLite baseN;
+		baseN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		baseN.SetFractalType(FastNoiseLite::FractalType_FBm);
+		baseN.SetFractalOctaves(4);
+		baseN.SetFrequency(1.0f);
+		baseN.SetFractalGain(0.5f);
 
 		std::vector<Vertex> vertices;
 		std::vector<UINT> indices;
@@ -455,10 +476,24 @@ namespace EnvironmentalEngine{
 					
 					XMFLOAT3 spherePos;
 					XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
-					float elevation = noise.GetNoise(spherePos.x, spherePos.y, spherePos.z);
-					float strength = 0.1f;
-					float h = radius + (1.0f * strength * max(elevation, 0.0f));
-					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, elevation * 0.5f + 0.5f});
+					float base = baseN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
+					float mtn = mtnN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
+
+					float sharpness = 2.0f;
+					mtn = powf(mtn, sharpness);
+
+					float mask = smoothstep(0.65f, 0.8f, base);
+					float mtnStrength = 0.6f;
+					float strength = 0.15f;
+					float e = base + mtn * mask * mtnStrength;
+
+					float seaLevel = 0.5f;
+					float land = max(e - seaLevel, 0.0f);
+
+					float h = radius * (1.0f + strength * land);
+					
+
+					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
 				}
 			}
 		}
@@ -491,6 +526,24 @@ namespace EnvironmentalEngine{
 			vertices[ia].nx += fn.x; vertices[ia].ny += fn.y; vertices[ia].nz += fn.z;
 			vertices[ib].nx += fn.x; vertices[ib].ny += fn.y; vertices[ib].nz += fn.z;
 			vertices[ic].nx += fn.x; vertices[ic].ny += fn.y; vertices[ic].nz += fn.z;
+		}
+
+		std::map<std::tuple<int, int, int>, XMFLOAT3> welded;
+
+		auto key = [](const Vertex& v) {
+			return std::make_tuple(int(std::lround(v.x * 100000.0f)),
+				int(std::lround(v.y * 100000.0f)),
+				int(std::lround(v.z * 100000.0f))
+			); };
+
+		for (auto& v : vertices) {
+			auto& n = welded[key(v)];
+			n.x += v.nx; n.y += v.ny; n.z += v.nz;
+		}
+
+		for(auto& v : vertices){
+			auto& n = welded[key(v)];
+			v.nx = n.x; v.ny = n.y; v.nz = n.z;
 		}
 
 		for (auto& v : vertices) {
