@@ -67,7 +67,13 @@ struct PerObjectConstants {
 struct atmosphereConstants {
 	XMFLOAT4X4 invViewProj;
 	XMFLOAT3 camPos;
-	float padding0;
+	float innerRadius;
+	XMFLOAT3 planetCenter;
+	float outerRadius;
+	XMFLOAT3 dirToSun;
+	float scaleHeight;
+	XMFLOAT3 rayleighCoeff;
+	float sunIntensity;
 };
 
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
@@ -244,6 +250,18 @@ namespace EnvironmentalEngine{
 		ImGui::StyleColorsDark();
 		ImGui_ImplWin32_Init(hwnd);
 		ImGui_ImplDX11_Init(m_device.Get(), m_context.Get());
+
+		D3D11_BLEND_DESC bd = {};
+		bd.RenderTarget[0].BlendEnable = TRUE;
+		bd.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+		bd.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+		bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+		bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		bd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+		Check(m_device->CreateBlendState(&bd, &m_additiveBlend));
 	}
 
 	Renderer::~Renderer()
@@ -255,8 +273,8 @@ namespace EnvironmentalEngine{
 
 	void Renderer::BeginFrame(int width, int height, float deltaTime, const DirectX::XMMATRIX& view, DirectX::XMFLOAT3 camPos, DirectionalLight& dl, AmbientLight& al, PointLight& pl) 
     {
-		static float pitch = 0.0f;
-		static float yaw = 0.0f;
+
+		m_lightDir = dl.direction;
 
 		if ((width != old_width || height != old_height) && width != 0 && height != 0) {
 			Resize(width, height);
@@ -264,7 +282,7 @@ namespace EnvironmentalEngine{
 			old_height = height;
 		}
 
-		const float clear[4] = { 0.39f, 0.58f, 0.93f, 1.0f };
+		const float clear[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), m_depthView.Get());
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
 		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -615,11 +633,35 @@ namespace EnvironmentalEngine{
 
 	void Renderer::DrawAtmosphere(XMFLOAT3 camPos ) {
 
+		static XMFLOAT3 planetCenter = { 0.0f, -1000.0f, 0.0f };
+		static XMFLOAT3 rayleighCoeff = {5.8f*4.0f, 13.5f*4.0f, 33.1f*4.0f};
+		static float innerRadius = 1.0f;
+		static float outerRadius = 1.025f;
+		static float scaleHeight = 0.003f;
+		static float sunIntensity = 20.0f;
+
+		if (ImGui::CollapsingHeader("Atmosphere")) {
+			ImGui::DragFloat3("Planet center", &planetCenter.x);
+			ImGui::ColorPicker3("Rayleigh", &rayleighCoeff.x);
+			ImGui::DragFloat("Inner Radius", &innerRadius, 0.01f);
+			ImGui::DragFloat("Outer Radius", &outerRadius, 0.01f);
+			ImGui::DragFloat("Scale height", &scaleHeight, 0.001f);
+			ImGui::DragFloat("Sun intensity", &sunIntensity, 0.1f);
+		}
+
 		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, m_viewMatrix * m_projMatrix);
 		
 		atmosphereConstants ac = {};
 		XMStoreFloat4x4(&ac.invViewProj, XMMatrixTranspose( inverseViewProjection ));
 		XMStoreFloat3(&ac.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
+		XMStoreFloat3(&ac.dirToSun, XMVectorSet(-m_lightDir.x, -m_lightDir.y, -m_lightDir.z, 0.0f));
+		XMStoreFloat3(&ac.rayleighCoeff, XMVectorSet(rayleighCoeff.x, rayleighCoeff.y, rayleighCoeff.z, 0.0f));
+		XMStoreFloat3(&ac.planetCenter, XMVectorSet(planetCenter.x, planetCenter.y, planetCenter.z, 0.0f));
+		XMStoreFloat(&ac.innerRadius, XMVectorSet(innerRadius, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.outerRadius, XMVectorSet(outerRadius, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.scaleHeight, XMVectorSet(scaleHeight, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.sunIntensity, XMVectorSet(sunIntensity, 0.0f, 0.0f, 0.0f));
+
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_atmosphereBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -640,10 +682,15 @@ namespace EnvironmentalEngine{
 
 		m_context->PSSetShaderResources(0, 1, m_depthSrv.GetAddressOf());
 
+		float bf[4] = { 0, 0, 0, 0 };
+		m_context->OMSetBlendState(m_additiveBlend.Get(), bf, 0xffffffff);
+
 		m_context->Draw(3, 0);
 
 		ID3D11ShaderResourceView* nsrv = nullptr;
 		m_context->PSSetShaderResources(0, 1, &nsrv);
+
+		m_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 	}
 }
 

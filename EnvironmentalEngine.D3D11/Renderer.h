@@ -59,8 +59,13 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_atmoVS;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_atmoPS;
 
+		Microsoft::WRL::ComPtr<ID3D11BlendState> m_additiveBlend;
+
 		DirectX::XMMATRIX m_viewMatrix;
 		DirectX::XMMATRIX m_projMatrix;
+
+		DirectX::XMFLOAT3 m_lightDir;
+
 
 		float m_fov = 60.0f;
 	};
