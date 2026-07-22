@@ -29,6 +29,9 @@ int main()
 
     std::vector<std::unique_ptr<GameObject>> objects = {};
 
+    auto planetObject = std::make_unique<GameObject>();
+    planetObject->name = "Plane";
+    planetObject->transform = { {0.0f, -1000.0f, 0.0f} , {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
   
     auto lightObject = std::make_unique<GameObject>();
     lightObject->name = "Lights";
@@ -38,10 +41,11 @@ int main()
 
     auto object3 = std::make_unique<GameObject>();
     object3->name = "Planet";
-    object3->transform = { {0.0f, -1000.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1000.0f, 1000.0f, 1000.0f} };
+    object3->transform = { {1500.0f, -1000.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
     MeshRenderer* mr3 = object3->AddComponent<MeshRenderer>();
     mr3->mesh = renderer.PlanetMesh();
 
+    objects.push_back(std::move(planetObject));
     objects.push_back(std::move(lightObject));
     objects.push_back(std::move(object3));
 
@@ -114,6 +118,9 @@ int main()
             if(MeshRenderer* mr = go.GetComponent<MeshRenderer>())
                 renderer.Draw(*mr, go.transform);
         }
+
+        GameObject& go = *objects[0];
+        renderer.DrawPlanet(go.transform);
 
         renderer.DrawAtmosphere(camera.position);
         

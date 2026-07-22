@@ -25,7 +25,10 @@ namespace EnvironmentalEngine {
 		void Resize(int width, int height);
 
 		void Draw(const MeshRenderer& mr, const Transform& tr);
+		void DrawPlanet(const Transform& tr);
 		void DrawAtmosphere(DirectX::XMFLOAT3 camPos);
+
+		
 
 		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
 		Mesh* SphereMesh() const { return m_sphereMesh.get(); }
@@ -39,10 +42,13 @@ namespace EnvironmentalEngine {
 	    
 	    void CreateCube();
 		void CreatePlanet(float radius, UINT res);
+
+		std::unique_ptr<Mesh> GenerateChunk(UINT face, DirectX::XMFLOAT2 uvMin, DirectX::XMFLOAT2 uvMax);
 	    
 		std::unique_ptr<Mesh> m_cubeMesh;
 		std::unique_ptr<Mesh> m_sphereMesh;
 		std::unique_ptr<Mesh> m_planetMesh;
+		std::vector<std::unique_ptr<Mesh>> m_chunks;
 	    
 	    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
 	    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;

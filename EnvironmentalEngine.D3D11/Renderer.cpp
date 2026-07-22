@@ -7,7 +7,6 @@
 #include "FastNoiseLite.h"
 #include <stdexcept>
 #include <d3dcompiler.h>
-#include <cmath>
 #include <DirectXMath.h>
 #include <Lights.h>
 #include <memory>
@@ -80,6 +79,10 @@ static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the w
 
 float clamp(float v, float minValue, float maxValue) {
 	return max(min(v, maxValue), minValue);
+}
+
+float lerp(float a, float b, float t) {
+	return a + t * (b - a);
 }
 
 float smoothstep(float edge0, float edge1, float x) {
@@ -243,7 +246,19 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
         
 		CreateCube();
-		CreatePlanet(1, 248);
+		CreatePlanet(1, 128);
+
+
+		for (UINT face = 0; face < 6; face++){
+			if(face != 0)
+				m_chunks.push_back(GenerateChunk(face, { 0.0f, 0.0f }, { 1.0f, 1.0f }));
+			else {
+				m_chunks.push_back(GenerateChunk(face, { 0.0f, 0.0f }, { 0.5f, 0.5f }));
+				m_chunks.push_back(GenerateChunk(face, { 0.0f, 0.5f }, { 0.5f, 1.0f }));
+				m_chunks.push_back(GenerateChunk(face, { 0.5f, 0.0f }, { 1.0f, 0.5f }));
+				m_chunks.push_back(GenerateChunk(face, { 0.5f, 0.5f }, { 1.0f, 1.0f }));
+			}
+		}
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -359,6 +374,36 @@ namespace EnvironmentalEngine{
 
 		mr.mesh->Bind(m_context.Get());
 		m_context->DrawIndexed(mr.mesh->IndexCount(), 0, 0);
+	}
+
+	void Renderer::DrawPlanet(const Transform& tr) {
+		XMMATRIX world =
+			XMMatrixScaling(tr.scale.x, tr.scale.y, tr.scale.z) *
+			XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(tr.rotation.x), DirectX::XMConvertToRadians(tr.rotation.y), DirectX::XMConvertToRadians(tr.rotation.z)) *
+			XMMatrixTranslation(tr.position.x, tr.position.y, tr.position.z);
+
+		XMMATRIX final = world * m_viewMatrix * m_projMatrix;
+
+		XMMATRIX normal = XMMatrixInverse(nullptr, world);
+
+		PerObjectConstants constants = {};
+		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(final));
+		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
+		XMStoreFloat4x4(&constants.normal, normal);
+
+		XMStoreFloat4(&constants.cubeColor, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&constants.specularIntensity, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&constants.smoothness, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
+
+		D3D11_MAPPED_SUBRESOURCE mapped = {};
+		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &constants, sizeof(constants));
+		m_context->Unmap(m_perObjectBuffer.Get(), 0);
+
+		for (auto& mesh : m_chunks) {
+			mesh->Bind(m_context.Get());
+			m_context->DrawIndexed(mesh->IndexCount(), 0, 0);
+		}
 	}
 
 	void Renderer::EndFrame() 
@@ -567,7 +612,6 @@ namespace EnvironmentalEngine{
 					float land = max(e - seaLevel, 0.0f);
 
 					float h = radius * (1.0f + strength * land);
-					
 
 					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
 				}
@@ -631,13 +675,105 @@ namespace EnvironmentalEngine{
 		m_planetMesh = std::make_unique<Mesh>(m_device.Get(), vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
 	}
 
+	std::unique_ptr<Mesh> Renderer::GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax) {
+
+		UINT res = 16;
+
+		FastNoiseLite mtnN;
+		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		mtnN.SetFractalType(FastNoiseLite::FractalType_Ridged);
+		mtnN.SetFractalOctaves(5);
+		mtnN.SetFrequency(1.8f);
+		mtnN.SetFractalGain(0.5f);
+
+		FastNoiseLite baseN;
+		baseN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		baseN.SetFractalType(FastNoiseLite::FractalType_FBm);
+		baseN.SetFractalOctaves(4);
+		baseN.SetFrequency(1.0f);
+		baseN.SetFractalGain(0.5f);
+
+		std::vector<Vertex> vertices;
+		std::vector<UINT> indices;
+
+		XMFLOAT3 localUp[6] = {
+			{  0.0f,  1.0f,  0.0f },
+			{  0.0f, -1.0f,  0.0f },
+			{  1.0f,  0.0f,  0.0f },
+			{ -1.0f,  0.0f,  0.0f },
+			{  0.0f,  0.0f,  1.0f },
+			{  0.0f,  0.0f, -1.0f } };
+		XMFLOAT3 axisA[6] = {
+			{  1.0f,  0.0f,  0.0f },
+			{ -1.0f,  0.0f,  0.0f },
+			{  0.0f,  0.0f,  1.0f },
+			{  0.0f,  0.0f, -1.0f },
+			{  0.0f,  1.0f,  0.0f },
+			{  0.0f, -1.0f,  0.0f } };
+		XMFLOAT3 axisB[6] = {
+			{  0.0f,  0.0f, -1.0f },
+			{  0.0f,  0.0f, -1.0f },
+			{  0.0f, -1.0f,  0.0f },
+			{  0.0f, -1.0f,  0.0f },
+			{ -1.0f,  0.0f,  0.0f },
+			{ -1.0f,  0.0f,  0.0f } };
+
+		for (int x = 0; x < res; x++) {
+			for (int y = 0; y < res; y++) {
+				XMFLOAT2 percent = { x / (res - 1.0f), y / (res - 1.0f) };
+				XMFLOAT2 uv = { lerp(uvMin.x, uvMax.x, percent.x), lerp(uvMin.y, uvMax.y, percent.y) };
+				XMVECTOR cubePos = XMVectorSet(localUp[face].x, localUp[face].y, localUp[face].z, 0.0f) +
+					(uv.x - 0.5f) * 2.0f * XMVectorSet(axisA[face].x, axisA[face].y, axisA[face].z, 0.0f) +
+					(uv.y - 0.5f) * 2.0f * XMVectorSet(axisB[face].x, axisB[face].y, axisB[face].z, 0.0f);
+
+				XMFLOAT3 spherePos;
+				XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
+				float base = baseN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
+				float mtn = mtnN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
+
+				float sharpness = 2.0f;
+				mtn = powf(mtn, sharpness);
+
+				float mask = smoothstep(0.65f, 0.8f, base);
+				float mtnStrength = 0.6f;
+				float strength = 0.15f;
+				float e = base + mtn * mask * mtnStrength;
+
+				float seaLevel = 0.5f;
+				float land = max(e - seaLevel, 0.0f);
+
+				float h = 1000.0f * (1.0f + strength * land);
+
+				vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, spherePos.x, spherePos.y, spherePos.z, e });
+			}
+		}
+
+		for (int x = 0; x < res - 1; x++) {
+			for (int y = 0; y < res - 1; y++) {
+				int i = x + y * res;
+				indices.push_back(i);
+				indices.push_back(i + res);
+				indices.push_back(i + res + 1);
+
+				indices.push_back(i);
+				indices.push_back(i + res + 1);
+				indices.push_back(i + 1);
+			}
+		}
+
+		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>(m_device.Get(), vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
+
+		return mesh;
+		
+	}
+
 	void Renderer::DrawAtmosphere(XMFLOAT3 camPos ) {
 
 		static XMFLOAT3 planetCenter = { 0.0f, -1000.0f, 0.0f };
-		static XMFLOAT3 rayleighCoeff = {5.8f*4.0f, 13.5f*4.0f, 33.1f*4.0f};
-		static float innerRadius = 1.0f;
-		static float outerRadius = 1.025f;
-		static float scaleHeight = 0.003f;
+		static XMFLOAT3 rayleighCoeff = {5.8f / 250.0f, 13.5f / 250.0f, 33.1f / 250.0f};
+		static float innerRadius = 1000.0f;
+		static float outerRadius = 1025.0f;
+		static float scaleHeight = 3.0f;
 		static float sunIntensity = 20.0f;
 
 		if (ImGui::CollapsingHeader("Atmosphere")) {
