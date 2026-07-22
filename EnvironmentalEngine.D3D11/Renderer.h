@@ -25,6 +25,7 @@ namespace EnvironmentalEngine {
 		void Resize(int width, int height);
 
 		void Draw(const MeshRenderer& mr, const Transform& tr);
+		void DrawAtmosphere(DirectX::XMFLOAT3 camPos);
 
 		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
 		Mesh* SphereMesh() const { return m_sphereMesh.get(); }
@@ -49,9 +50,14 @@ namespace EnvironmentalEngine {
 
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_perFrameBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_perObjectBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer> m_atmosphereBuffer;
 
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthTex;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthView;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_depthSrv;
+
+		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_atmoVS;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_atmoPS;
 
 		DirectX::XMMATRIX m_viewMatrix;
 		DirectX::XMMATRIX m_projMatrix;

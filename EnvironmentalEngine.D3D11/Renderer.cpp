@@ -64,6 +64,12 @@ struct PerObjectConstants {
 	float padding[2];
 };
 
+struct atmosphereConstants {
+	XMFLOAT4X4 invViewProj;
+	XMFLOAT3 camPos;
+	float padding0;
+};
+
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
 
 float clamp(float v, float minValue, float maxValue) {
@@ -134,12 +140,26 @@ namespace EnvironmentalEngine{
 		dd.Height = height;
 		dd.MipLevels = 1;
 		dd.ArraySize = 1;
-		dd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dd.Format = DXGI_FORMAT_R24G8_TYPELESS;
 		dd.SampleDesc.Count = 1;
 		dd.Usage = D3D11_USAGE_DEFAULT;
-		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsv = {};
+		dsv.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsv.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		dsv.Texture2D.MipSlice = 0;
+		dsv.Flags = 0;
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv = {};
+		srv.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv.Texture2D.MostDetailedMip = 0;
+		srv.Texture2D.MipLevels = 1;
+
 		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
-		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
+		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
+		Check(m_device->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
 
 		D3D11_VIEWPORT vp = {};
 		vp.Width = static_cast<float>(width);
@@ -195,13 +215,26 @@ namespace EnvironmentalEngine{
 		dd.Height = height;
 		dd.MipLevels = 1;
 		dd.ArraySize = 1;
-		dd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dd.Format = DXGI_FORMAT_R24G8_TYPELESS;
 		dd.SampleDesc.Count = 1;
 		dd.Usage = D3D11_USAGE_DEFAULT;
-		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsv = {};
+		dsv.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsv.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		dsv.Texture2D.MipSlice = 0;
+		dsv.Flags = 0;
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv = {};
+		srv.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv.Texture2D.MostDetailedMip = 0;
+		srv.Texture2D.MipLevels = 1;
 
 		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
-		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), nullptr, &m_depthView));
+		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
+		Check(m_device->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
         
 		CreateCube();
 		CreatePlanet(1, 248);
@@ -406,6 +439,14 @@ namespace EnvironmentalEngine{
 		
 		Check(m_device->CreateBuffer(&pocbd, nullptr, &m_perObjectBuffer));
 
+		D3D11_BUFFER_DESC acbd = {};
+		acbd.ByteWidth = sizeof(atmosphereConstants);
+		acbd.Usage = D3D11_USAGE_DYNAMIC;
+		acbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		acbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+		Check(m_device->CreateBuffer(&acbd, nullptr, &m_atmosphereBuffer));
+
 		std::wstring shaderPath = ExeDir() + L"Triangle.hlsl";
 
 		auto vsBlob = LoadShaderByteCode((shaderPath).c_str(), "VSMain", "vs_5_0");
@@ -431,6 +472,23 @@ namespace EnvironmentalEngine{
 			layout, 3,
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			&m_inputLayout
+		));
+
+		std::wstring atmoPath = ExeDir() + L"Atmosphere.hlsl";
+		auto avs = LoadShaderByteCode(atmoPath.c_str(), "VSMain", "vs_5_0");
+		auto aps = LoadShaderByteCode(atmoPath.c_str(), "PSMain", "ps_5_0");
+
+
+		Check(m_device->CreateVertexShader(
+			avs->GetBufferPointer(), avs->GetBufferSize(),
+			nullptr, &m_atmoVS
+		));
+
+		Check(m_device->CreatePixelShader(
+			aps->GetBufferPointer(), aps->GetBufferSize(),
+			nullptr, &m_atmoPS
+
+
 		));
     }
 
@@ -553,6 +611,39 @@ namespace EnvironmentalEngine{
 		}
 
 		m_planetMesh = std::make_unique<Mesh>(m_device.Get(), vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
+	}
+
+	void Renderer::DrawAtmosphere(XMFLOAT3 camPos ) {
+
+		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, m_viewMatrix * m_projMatrix);
+		
+		atmosphereConstants ac = {};
+		XMStoreFloat4x4(&ac.invViewProj, XMMatrixTranspose( inverseViewProjection ));
+		XMStoreFloat3(&ac.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
+
+		D3D11_MAPPED_SUBRESOURCE mapped = {};
+		m_context->Map(m_atmosphereBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &ac, sizeof(ac));
+		m_context->Unmap(m_atmosphereBuffer.Get(), 0);
+
+		m_context->VSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
+		m_context->PSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
+
+
+		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
+		m_context->VSSetShader(m_atmoVS.Get(), nullptr, 0);
+		m_context->PSSetShader(m_atmoPS.Get(), nullptr, 0);
+		m_context->IASetInputLayout(nullptr);
+		ID3D11Buffer* nullVB = nullptr; UINT s = 0, o = 0;
+		m_context->IASetVertexBuffers(0, 1, &nullVB, &s, &o);
+		m_context->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		m_context->PSSetShaderResources(0, 1, m_depthSrv.GetAddressOf());
+
+		m_context->Draw(3, 0);
+
+		ID3D11ShaderResourceView* nsrv = nullptr;
+		m_context->PSSetShaderResources(0, 1, &nsrv);
 	}
 }
 

@@ -120,7 +120,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(ProjectDir)Triangle.hlsl" "$(OutDir)"</Command>
+      <Command>xcopy /Y "$(ProjectDir)Triangle.hlsl" "$(OutDir)"
+xcopy /Y "$(ProjectDir)Atmosphere.hlsl" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -199,6 +200,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\EnvironmentalEngine\Triangle.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Atmosphere.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

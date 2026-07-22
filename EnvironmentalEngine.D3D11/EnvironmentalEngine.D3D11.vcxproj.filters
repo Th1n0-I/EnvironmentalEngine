@@ -99,5 +99,6 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="..\EnvironmentalEngine\Triangle.hlsl" />
+    <None Include="Atmosphere.hlsl" />
   </ItemGroup>
 </Project>
