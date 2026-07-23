@@ -41,6 +41,7 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
 		Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rtv;
+		Microsoft::WRL::ComPtr<ID3D11RasterizerState>  m_wireframe;
 	    
 	    void CreateCube();
 		void CreatePlanet(float radius, UINT res);

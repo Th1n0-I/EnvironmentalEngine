@@ -22,7 +22,7 @@ int main()
     Timer timer;
 
     Camera camera;
-    camera.position = { 0.0f, 1000.0f, 0.0f };
+    camera.position = { 0.0f, 2000.0f, 0.0f };
     camera.moveSpeed = 300.0f;
 
     
@@ -31,7 +31,7 @@ int main()
 
     auto planetObject = std::make_unique<GameObject>();
     planetObject->name = "Plane";
-    planetObject->transform = { {0.0f, -1000.0f, 0.0f} , {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
+    planetObject->transform = { {0.0f, 0.0f, 0.0f} , {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
   
     auto lightObject = std::make_unique<GameObject>();
     lightObject->name = "Lights";
@@ -41,7 +41,7 @@ int main()
 
     auto object3 = std::make_unique<GameObject>();
     object3->name = "Planet";
-    object3->transform = { {1500.0f, -1000.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
+    object3->transform = { {1500.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
     MeshRenderer* mr3 = object3->AddComponent<MeshRenderer>();
     mr3->mesh = renderer.PlanetMesh();
 

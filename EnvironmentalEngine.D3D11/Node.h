@@ -17,7 +17,7 @@ namespace EnvironmentalEngine {
 		UINT face;
 		XMFLOAT2 uvMin, uvMax;
 		UINT level;
-		XMFLOAT3 center;
+		XMFLOAT3 center, AABBMin, AABBMax;
 		chunkData chunkData;
 		std::unique_ptr<node> children[4];
 		std::unique_ptr<Mesh> mesh;
@@ -70,6 +70,12 @@ namespace EnvironmentalEngine {
 		XMFLOAT2 uvCenter = XMFLOAT2{ (uvMin.x + uvMax.x) * 0.5f, (uvMin.y + uvMax.y) * 0.5f };
 		XMStoreFloat3(&n.center, XMVector3Normalize(CubePos(face, uvCenter)) * 1000.0f);
 		n.chunkData = GenerateChunk(face, uvMin, uvMax);
+		n.AABBMin = { n.chunkData.vertices[0].x, n.chunkData.vertices[0].y, n.chunkData.vertices[0].z };
+		n.AABBMax = n.AABBMin;
+		for (auto& v : n.chunkData.vertices) {
+			n.AABBMin.x = (std::min)(v.x, n.AABBMin.x); n.AABBMin.y = (std::min)(v.y, n.AABBMin.y); n.AABBMin.z = (std::min)(v.z, n.AABBMin.z);
+			n.AABBMax.x = (std::max)(v.x, n.AABBMax.x); n.AABBMax.y = (std::max)(v.y, n.AABBMax.y); n.AABBMax.z = (std::max)(v.z, n.AABBMax.z);
+		}
 
 		return n;
 	}

@@ -40,7 +40,7 @@ namespace EnvironmentalEngine {
 
 	chunkData GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax) {
 
-		UINT res = 64;
+		UINT res = 16;
 
 		FastNoiseLite mtnN;
 		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -124,11 +124,16 @@ namespace EnvironmentalEngine {
 	void UpdateLOD(ID3D11Device* device  ,node& n, XMFLOAT3 camPos) {
 		
 		static UINT MAX = 8;
-		static float threshold = 400;
-		static float thresholdSq = threshold * threshold;
+		float chunkSize = (2.0f * 1000.0f) / (1 << n.level);
+		float threshold = 3 * chunkSize;
+		float thresholdSq = threshold * threshold;
 
-		XMVECTOR d = XMLoadFloat3(&camPos) - XMLoadFloat3(&n.center);
-		float distSq = XMVectorGetX(XMVector3LengthSq(d));
+
+		float dx = (std::max)({ n.AABBMin.x - camPos.x, 0.0f, camPos.x - n.AABBMax.x });
+		float dy = (std::max)({ n.AABBMin.y - camPos.y, 0.0f, camPos.y - n.AABBMax.y });
+		float dz = (std::max)({ n.AABBMin.z - camPos.z, 0.0f, camPos.z - n.AABBMax.z });
+
+		float distSq = dx * dx + dy * dy + dz * dz;
 
 		if (isLeaf(n)) {
 			if (n.level < MAX && distSq < thresholdSq) {

@@ -313,6 +313,13 @@ namespace EnvironmentalEngine{
 			0.1f,
 			5000.0f);
 
+		
+		D3D11_RASTERIZER_DESC rd = {};
+		rd.FillMode = D3D11_FILL_WIREFRAME;
+		rd.CullMode = D3D11_CULL_NONE;
+		m_device->CreateRasterizerState(&rd, &m_wireframe);
+		
+
 		PerFrameConstants frameConstants = {};
 		XMStoreFloat3(&frameConstants.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
 
@@ -408,9 +415,13 @@ namespace EnvironmentalEngine{
 		memcpy(mapped.pData, &constants, sizeof(constants));
 		m_context->Unmap(m_perObjectBuffer.Get(), 0);
 
+		//m_context->RSSetState(m_wireframe.Get());
+
 		for (auto& n : m_roots) {
 			DrawNode(m_context.Get(), *n);
 		}
+
+		//m_context->RSSetState(nullptr);
 	}
 
 	void Renderer::EndFrame() 
@@ -684,7 +695,7 @@ namespace EnvironmentalEngine{
 
 	std::unique_ptr<Mesh> Renderer::GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax) {
 
-		UINT res = 8;
+		UINT res = 2;
 
 		FastNoiseLite mtnN;
 		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -791,7 +802,7 @@ namespace EnvironmentalEngine{
 
 	void Renderer::DrawAtmosphere(XMFLOAT3 camPos ) {
 
-		static XMFLOAT3 planetCenter = { 0.0f, -1000.0f, 0.0f };
+		static XMFLOAT3 planetCenter = { 0.0f, -0.0f, 0.0f };
 		static XMFLOAT3 rayleighCoeff = {5.8f / 250.0f, 13.5f / 250.0f, 33.1f / 250.0f};
 		static float innerRadius = 1000.0f;
 		static float outerRadius = 1025.0f;
