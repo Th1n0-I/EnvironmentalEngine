@@ -140,19 +140,19 @@ namespace EnvironmentalEngine{
 		dd.Height = height;
 		dd.MipLevels = 1;
 		dd.ArraySize = 1;
-		dd.Format = DXGI_FORMAT_R24G8_TYPELESS;
+		dd.Format = DXGI_FORMAT_R32_TYPELESS;
 		dd.SampleDesc.Count = 1;
 		dd.Usage = D3D11_USAGE_DEFAULT;
 		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsv = {};
-		dsv.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsv.Format = DXGI_FORMAT_D32_FLOAT;
 		dsv.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsv.Texture2D.MipSlice = 0;
 		dsv.Flags = 0;
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srv = {};
-		srv.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv.Format = DXGI_FORMAT_R32_FLOAT;
 		srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srv.Texture2D.MostDetailedMip = 0;
 		srv.Texture2D.MipLevels = 1;
@@ -215,19 +215,24 @@ namespace EnvironmentalEngine{
 		dd.Height = height;
 		dd.MipLevels = 1;
 		dd.ArraySize = 1;
-		dd.Format = DXGI_FORMAT_R24G8_TYPELESS;
+		dd.Format = DXGI_FORMAT_R32_TYPELESS;
 		dd.SampleDesc.Count = 1;
 		dd.Usage = D3D11_USAGE_DEFAULT;
 		dd.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsv = {};
-		dsv.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsv.Format = DXGI_FORMAT_D32_FLOAT;
 		dsv.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsv.Texture2D.MipSlice = 0;
 		dsv.Flags = 0;
 
+		D3D11_DEPTH_STENCIL_DESC dsd = {};
+		dsd.DepthEnable = TRUE;
+		dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		dsd.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
+
 		D3D11_SHADER_RESOURCE_VIEW_DESC srv = {};
-		srv.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv.Format = DXGI_FORMAT_R32_FLOAT;
 		srv.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srv.Texture2D.MostDetailedMip = 0;
 		srv.Texture2D.MipLevels = 1;
@@ -235,12 +240,13 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
 		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
 		Check(m_device->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
+		Check(m_device->CreateDepthStencilState(&dsd, &m_depthState));
         
 		CreateCube();
 		CreatePlanet(1, 128);
 
 		m_planet = std::make_unique<PlanetRenderer>(
-			m_device.Get(), XMFLOAT3{ 0.0f, 0.0f, 0.0f }, 1000.0f
+			m_device.Get(), XMFLOAT3{ 0.0f, -100000.0f, 0.0f }, 100000.0f
 			);
 
 		IMGUI_CHECKVERSION();
@@ -283,7 +289,8 @@ namespace EnvironmentalEngine{
 		const float clear[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), m_depthView.Get());
 		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
-		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 0.0f, 0);
+		m_context->OMSetDepthStencilState(m_depthState.Get(), 0);
 
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
@@ -298,8 +305,8 @@ namespace EnvironmentalEngine{
 		m_projMatrix = XMMatrixPerspectiveFovLH(
 			XMConvertToRadians(m_fov),
 			aspect_ratio,
-			0.1f,
-			5000.0f);
+			500000.0f,
+			1.0f);
 
 		
 		D3D11_RASTERIZER_DESC rd = {};
