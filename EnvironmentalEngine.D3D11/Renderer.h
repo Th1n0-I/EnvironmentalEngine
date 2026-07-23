@@ -6,6 +6,7 @@
 #include <DirectXMath.h>
 #include <Lights.h>
 #include "Mesh.h"
+#include "Node.h"
 #include "MeshRenderer.h"
 #include "GameObject.h"
 #include <memory>
@@ -27,6 +28,7 @@ namespace EnvironmentalEngine {
 		void Draw(const MeshRenderer& mr, const Transform& tr);
 		void DrawPlanet(const Transform& tr);
 		void DrawAtmosphere(DirectX::XMFLOAT3 camPos);
+		void DrawNode(ID3D11DeviceContext* ctx, const node& n);
 
 		
 
@@ -72,7 +74,10 @@ namespace EnvironmentalEngine {
 
 		DirectX::XMFLOAT3 m_lightDir;
 
+		std::unique_ptr<node> m_roots[6];
 
 		float m_fov = 60.0f;
 	};
+
+	
 }

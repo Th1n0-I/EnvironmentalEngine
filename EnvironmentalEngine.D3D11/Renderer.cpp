@@ -5,6 +5,8 @@
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx11.h"
 #include "FastNoiseLite.h"
+#include "MathHelper.h"
+#include "Node.h"
 #include <stdexcept>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
@@ -13,6 +15,7 @@
 #include <vector>
 #include <map>
 #include <tuple>
+#include <cmath>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -34,6 +37,8 @@ inline void Check(HRESULT hr)
 		throw std::runtime_error("D3D11 Call failed!");
 	}
 }
+
+
 
 struct PerFrameConstants {
 	
@@ -76,21 +81,6 @@ struct atmosphereConstants {
 };
 
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
-
-float clamp(float v, float minValue, float maxValue) {
-	return max(min(v, maxValue), minValue);
-}
-
-float lerp(float a, float b, float t) {
-	return a + t * (b - a);
-}
-
-float smoothstep(float edge0, float edge1, float x) {
-
-	x = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
-
-	return x * x * (3 - 2 * x);
-}
 
 std::wstring ExeDir()
 {
@@ -248,6 +238,11 @@ namespace EnvironmentalEngine{
 		CreateCube();
 		CreatePlanet(1, 128);
 
+		for (UINT f = 0; f < 6; f++) {
+			m_roots[f] = std::make_unique<node>(MakeNode(f, { 0.0f, 0.0f }, { 1.0f, 1.0f }, 0));
+			UploadNode(m_device.Get(), *m_roots[f]);
+		}
+
 
 		for (UINT face = 0; face < 6; face++){
 			if(face != 0)
@@ -345,6 +340,10 @@ namespace EnvironmentalEngine{
 		m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
 		m_context->IASetInputLayout(m_inputLayout.Get());
+
+		for (UINT f = 0; f < 6; f++) {
+			UpdateLOD(m_device.Get(), *m_roots[f], camPos);
+		}
 	}
 
 	void Renderer::Draw(const MeshRenderer& mr, const Transform& tr) 
@@ -376,6 +375,15 @@ namespace EnvironmentalEngine{
 		m_context->DrawIndexed(mr.mesh->IndexCount(), 0, 0);
 	}
 
+	void Renderer::DrawNode(ID3D11DeviceContext* ctx, const node& n) {
+		if (isLeaf(n)) {
+			if (n.mesh) { n.mesh->Bind(ctx); ctx->DrawIndexed(n.mesh->IndexCount(), 0, 0); }
+		}
+		else {
+			for (auto& c : n.children) DrawNode(ctx, *c);
+		}
+	}
+
 	void Renderer::DrawPlanet(const Transform& tr) {
 		XMMATRIX world =
 			XMMatrixScaling(tr.scale.x, tr.scale.y, tr.scale.z) *
@@ -400,9 +408,8 @@ namespace EnvironmentalEngine{
 		memcpy(mapped.pData, &constants, sizeof(constants));
 		m_context->Unmap(m_perObjectBuffer.Get(), 0);
 
-		for (auto& mesh : m_chunks) {
-			mesh->Bind(m_context.Get());
-			m_context->DrawIndexed(mesh->IndexCount(), 0, 0);
+		for (auto& n : m_roots) {
+			DrawNode(m_context.Get(), *n);
 		}
 	}
 
@@ -677,7 +684,7 @@ namespace EnvironmentalEngine{
 
 	std::unique_ptr<Mesh> Renderer::GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax) {
 
-		UINT res = 16;
+		UINT res = 8;
 
 		FastNoiseLite mtnN;
 		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -744,7 +751,7 @@ namespace EnvironmentalEngine{
 
 				float h = 1000.0f * (1.0f + strength * land);
 
-				vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, spherePos.x, spherePos.y, spherePos.z, e });
+				vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
 			}
 		}
 
@@ -759,6 +766,21 @@ namespace EnvironmentalEngine{
 				indices.push_back(i + res + 1);
 				indices.push_back(i + 1);
 			}
+		}
+
+		for (size_t t = 0; t < indices.size(); t += 3) {
+			UINT ia = indices[t], ib = indices[t + 1], ic = indices[t + 2];
+
+			XMVECTOR a = XMVectorSet(vertices[ia].x, vertices[ia].y, vertices[ia].z, 0.0f);
+			XMVECTOR b = XMVectorSet(vertices[ib].x, vertices[ib].y, vertices[ib].z, 0.0f);
+			XMVECTOR c = XMVectorSet(vertices[ic].x, vertices[ic].y, vertices[ic].z, 0.0f);
+
+			XMVECTOR faceN = XMVector3Cross(b - a, c - a);
+			XMFLOAT3 fn; XMStoreFloat3(&fn, faceN);
+
+			vertices[ia].nx += fn.x; vertices[ia].ny += fn.y; vertices[ia].nz += fn.z;
+			vertices[ib].nx += fn.x; vertices[ib].ny += fn.y; vertices[ib].nz += fn.z;
+			vertices[ic].nx += fn.x; vertices[ic].ny += fn.y; vertices[ic].nz += fn.z;
 		}
 
 		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>(m_device.Get(), vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
