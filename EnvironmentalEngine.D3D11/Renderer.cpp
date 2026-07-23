@@ -413,7 +413,7 @@ namespace EnvironmentalEngine{
 		ImGui::End();
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-		m_swapChain->Present(0, 0);
+		m_swapChain->Present(1, 0);
 	}
 
 	void Renderer::CreateCube()
@@ -680,20 +680,13 @@ namespace EnvironmentalEngine{
 
 	void Renderer::DrawAtmosphere(XMFLOAT3 camPos ) {
 
-		static XMFLOAT3 planetCenter = { 0.0f, -0.0f, 0.0f };
-		static XMFLOAT3 rayleighCoeff = {5.8f / 250.0f, 13.5f / 250.0f, 33.1f / 250.0f};
-		static float innerRadius = 1000.0f;
-		static float outerRadius = 1025.0f;
-		static float scaleHeight = 3.0f;
-		static float sunIntensity = 20.0f;
-
 		if (ImGui::CollapsingHeader("Atmosphere")) {
-			ImGui::DragFloat3("Planet center", &planetCenter.x);
-			ImGui::ColorPicker3("Rayleigh", &rayleighCoeff.x);
-			ImGui::DragFloat("Inner Radius", &innerRadius, 0.01f);
-			ImGui::DragFloat("Outer Radius", &outerRadius, 0.01f);
-			ImGui::DragFloat("Scale height", &scaleHeight, 0.001f);
-			ImGui::DragFloat("Sun intensity", &sunIntensity, 0.1f);
+			ImGui::DragFloat3("Planet center", &m_planet->center.x);
+			ImGui::ColorPicker3("Rayleigh", &m_planet->rayleighCoeff.x);
+			ImGui::DragFloat("Inner Radius", &m_planet->innerRadius, 0.01f);
+			ImGui::DragFloat("Outer Radius", &m_planet->outerRadius, 0.01f);
+			ImGui::DragFloat("Scale height", &m_planet->scaleHeight, 0.001f);
+			ImGui::DragFloat("Sun intensity", &m_planet->sunIntensity, 0.1f);
 		}
 
 		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, m_viewMatrix * m_projMatrix);
@@ -702,12 +695,12 @@ namespace EnvironmentalEngine{
 		XMStoreFloat4x4(&ac.invViewProj, XMMatrixTranspose( inverseViewProjection ));
 		XMStoreFloat3(&ac.camPos, XMVectorSet(camPos.x, camPos.y, camPos.z, 0.0f));
 		XMStoreFloat3(&ac.dirToSun, XMVectorSet(-m_lightDir.x, -m_lightDir.y, -m_lightDir.z, 0.0f));
-		XMStoreFloat3(&ac.rayleighCoeff, XMVectorSet(rayleighCoeff.x, rayleighCoeff.y, rayleighCoeff.z, 0.0f));
-		XMStoreFloat3(&ac.planetCenter, XMVectorSet(planetCenter.x, planetCenter.y, planetCenter.z, 0.0f));
-		XMStoreFloat(&ac.innerRadius, XMVectorSet(innerRadius, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat(&ac.outerRadius, XMVectorSet(outerRadius, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat(&ac.scaleHeight, XMVectorSet(scaleHeight, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat(&ac.sunIntensity, XMVectorSet(sunIntensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat3(&ac.rayleighCoeff, XMVectorSet(m_planet->rayleighCoeff.x, m_planet->rayleighCoeff.y, m_planet->rayleighCoeff.z, 0.0f));
+		XMStoreFloat3(&ac.planetCenter, XMVectorSet(m_planet->center.x, m_planet->center.y, m_planet->center.z, 0.0f));
+		XMStoreFloat(&ac.innerRadius, XMVectorSet(m_planet->innerRadius, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.outerRadius, XMVectorSet(m_planet->outerRadius, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.scaleHeight, XMVectorSet(m_planet->innerRadius, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.sunIntensity, XMVectorSet(m_planet->sunIntensity, 0.0f, 0.0f, 0.0f));
 
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};

@@ -125,7 +125,7 @@ namespace EnvironmentalEngine {
 		
 		XMFLOAT3 localCamPos = XMFLOAT3{camPos.x - center.x, camPos.y - center.y, camPos.z - center.z};
 
-		static UINT MAX = 8;
+		static UINT MAX = 15;
 		float chunkSize = (2.0f * radius) / (1 << n.level);
 		float threshold = 2.0f * chunkSize;
 		float thresholdSq = threshold * threshold;

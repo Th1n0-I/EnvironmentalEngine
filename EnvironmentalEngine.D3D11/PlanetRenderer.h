@@ -20,6 +20,9 @@ namespace EnvironmentalEngine {
 			innerRadius = r;
 			outerRadius = r * 1.025f;
 
+			scaleHeight = r * 0.003f;
+			rayleighCoeff = { 23.2f / r, 54.0f / r, 132.4f / r };
+
 			for (UINT f = 0; f < 6; f++) {
 				roots[f] = std::make_unique<node>(
 					MakeNode(f, { 0.0f, 0.0f }, { 1.0f, 1.0f }, 0, radius)
