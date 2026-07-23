@@ -11,6 +11,7 @@
 #include "Lights.h"
 #include "imgui/imgui_stdlib.h"
 #include "GameObject.h"
+#include "PlanetRenderer.h"
 
 int main()
 {
@@ -120,7 +121,7 @@ int main()
         }
 
         GameObject& go = *objects[0];
-        renderer.DrawPlanet(go.transform);
+        renderer.DrawPlanet();
 
         renderer.DrawAtmosphere(camera.position);
         

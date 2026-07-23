@@ -38,7 +38,7 @@ namespace EnvironmentalEngine {
 		return cubePos;
 	}
 
-	chunkData GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax) {
+	chunkData GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax, float radius) {
 
 		UINT res = 16;
 
@@ -81,7 +81,7 @@ namespace EnvironmentalEngine {
 				float seaLevel = 0.5f;
 				float land = max(e - seaLevel, 0.0f);
 
-				float h = 1000.0f * (1.0f + strength * land);
+				float h = radius * (1.0f + strength * land);
 
 				vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
 			}
@@ -121,24 +121,26 @@ namespace EnvironmentalEngine {
 
 	}
 
-	void UpdateLOD(ID3D11Device* device  ,node& n, XMFLOAT3 camPos) {
+	void UpdateLOD(ID3D11Device* device  ,node& n, XMFLOAT3 camPos, XMFLOAT3 center, float radius) {
 		
+		XMFLOAT3 localCamPos = XMFLOAT3{camPos.x - center.x, camPos.y - center.y, camPos.z - center.z};
+
 		static UINT MAX = 8;
-		float chunkSize = (2.0f * 1000.0f) / (1 << n.level);
-		float threshold = 3 * chunkSize;
+		float chunkSize = (2.0f * radius) / (1 << n.level);
+		float threshold = 2.0f * chunkSize;
 		float thresholdSq = threshold * threshold;
 
 
-		float dx = (std::max)({ n.AABBMin.x - camPos.x, 0.0f, camPos.x - n.AABBMax.x });
-		float dy = (std::max)({ n.AABBMin.y - camPos.y, 0.0f, camPos.y - n.AABBMax.y });
-		float dz = (std::max)({ n.AABBMin.z - camPos.z, 0.0f, camPos.z - n.AABBMax.z });
+		float dx = (std::max)({ n.AABBMin.x - localCamPos.x, 0.0f, localCamPos.x - n.AABBMax.x });
+		float dy = (std::max)({ n.AABBMin.y - localCamPos.y, 0.0f, localCamPos.y - n.AABBMax.y });
+		float dz = (std::max)({ n.AABBMin.z - localCamPos.z, 0.0f, localCamPos.z - n.AABBMax.z });
 
 		float distSq = dx * dx + dy * dy + dz * dz;
 
 		if (isLeaf(n)) {
 			if (n.level < MAX && distSq < thresholdSq) {
 				for (int i = 0; i < 4; i++) {
-					n.children[i] = std::make_unique<node>(MakeNode(n.face, n.quadMin(i), n.quadMax(i), n.level + 1));
+					n.children[i] = std::make_unique<node>(MakeNode(n.face, n.quadMin(i), n.quadMax(i), n.level + 1, radius));
 					UploadNode(device, *n.children[i]);
 				}
 			}
@@ -151,7 +153,7 @@ namespace EnvironmentalEngine {
 			}
 			else {
 				for (auto& c : n.children) {
-					UpdateLOD(device, *c, camPos);
+					UpdateLOD(device, *c, camPos, center, radius);
 				}
 			}
 		}

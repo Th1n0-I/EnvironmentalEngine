@@ -157,6 +157,7 @@ xcopy /Y "$(ProjectDir)Atmosphere.hlsl" "$(OutDir)"</Command>
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="Node.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="PlanetRenderer.h" />
     <ClInclude Include="Renderer.h" />
   </ItemGroup>
   <ItemGroup>

@@ -9,6 +9,7 @@
 #include "Node.h"
 #include "MeshRenderer.h"
 #include "GameObject.h"
+#include "PlanetRenderer.h"
 #include <memory>
 
 namespace EnvironmentalEngine {
@@ -26,11 +27,9 @@ namespace EnvironmentalEngine {
 		void Resize(int width, int height);
 
 		void Draw(const MeshRenderer& mr, const Transform& tr);
-		void DrawPlanet(const Transform& tr);
+		void DrawPlanet();
 		void DrawAtmosphere(DirectX::XMFLOAT3 camPos);
 		void DrawNode(ID3D11DeviceContext* ctx, const node& n);
-
-		
 
 		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
 		Mesh* SphereMesh() const { return m_sphereMesh.get(); }
@@ -45,8 +44,6 @@ namespace EnvironmentalEngine {
 	    
 	    void CreateCube();
 		void CreatePlanet(float radius, UINT res);
-
-		std::unique_ptr<Mesh> GenerateChunk(UINT face, DirectX::XMFLOAT2 uvMin, DirectX::XMFLOAT2 uvMax);
 	    
 		std::unique_ptr<Mesh> m_cubeMesh;
 		std::unique_ptr<Mesh> m_sphereMesh;
@@ -75,7 +72,7 @@ namespace EnvironmentalEngine {
 
 		DirectX::XMFLOAT3 m_lightDir;
 
-		std::unique_ptr<node> m_roots[6];
+		std::unique_ptr<PlanetRenderer> m_planet;
 
 		float m_fov = 60.0f;
 	};

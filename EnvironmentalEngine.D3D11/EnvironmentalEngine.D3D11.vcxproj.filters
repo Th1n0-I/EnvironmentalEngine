@@ -63,6 +63,9 @@
     <ClInclude Include="Node.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PlanetRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EnvironmentalEngine.D3D11.cpp">
