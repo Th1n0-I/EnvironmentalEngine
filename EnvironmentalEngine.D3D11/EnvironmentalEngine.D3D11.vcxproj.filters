@@ -109,5 +109,6 @@
     <None Include="packages.config" />
     <None Include="..\EnvironmentalEngine\Triangle.hlsl" />
     <None Include="Atmosphere.hlsl" />
+    <None Include="toneMap.hlsl" />
   </ItemGroup>
 </Project>

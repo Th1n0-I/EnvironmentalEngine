@@ -84,7 +84,7 @@ float4 PSMain(VSOutput input) : SV_Target
     const int STEPS = 16, LIGHT_STEPS = 16;
     float stepSize = (tFar - tNear) / STEPS;
     float viewODr = 0.0, viewODm = 0.0;
-    float3 sumR = 0.0, sumM = 0.0;
+    float3 sumR = 0.0, sumM = 0.0, sumMulti = 0.0;
     
     for (int i = 0; i < STEPS; i++)
     {
@@ -110,16 +110,20 @@ float4 PSMain(VSOutput input) : SV_Target
 
         float3 tau = rayleighCoeff * (viewODr + sunODr) + mieCoeff * 1.1 * (viewODm + sunODm);
         float3 transmittance = exp(-tau);
+        float3 transMulti = exp(-tau * 0.25);
         
         sumR += dr * transmittance;
         sumM += dm * transmittance;
+        sumMulti += dr * transMulti;
     }
     
     float cosT = dot(rayDir, dirToSun);
     float phaseR = 3.0 / (16.0 * PI) * (1.0 + cosT * cosT);
     float phaseM = miePhase(cosT);
     
-    float3 inScatter = (sumR * rayleighCoeff * phaseR + sumM * mieCoeff * phaseM) * sunIntensity;
+    float3 single = sumR * rayleighCoeff * phaseR + sumM * mieCoeff * phaseM;
+    float3 mult = sumMulti * rayleighCoeff * (1.0 / (4.0 * PI)) * 0.5;
+    float3 inScatter = (single + mult) * sunIntensity;
     
     return float4(inScatter, 1.0);
 }

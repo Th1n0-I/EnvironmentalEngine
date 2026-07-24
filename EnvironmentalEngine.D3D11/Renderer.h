@@ -57,6 +57,7 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_perFrameBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_perObjectBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_atmosphereBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer> m_tonemapBuffer;
 
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthTex;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthView;
@@ -69,6 +70,9 @@ namespace EnvironmentalEngine {
 
 		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_atmoVS;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_atmoPS;
+
+		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_tonemapVS;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_tonemapPS;
 
 		Microsoft::WRL::ComPtr<ID3D11BlendState> m_additiveBlend;
 

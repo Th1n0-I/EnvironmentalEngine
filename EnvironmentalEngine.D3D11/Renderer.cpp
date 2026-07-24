@@ -85,6 +85,11 @@ struct atmosphereConstants {
 	float padding0;
 };
 
+struct tonemapConstants {
+	float exposure;
+	XMFLOAT3 padding;
+};
+
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
 
 std::wstring ExeDir()
@@ -242,7 +247,6 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateShaderResourceView(m_hdrTex.Get(), nullptr, &m_hdrSrv));
 		Check(m_device->CreateRenderTargetView(m_hdrTex.Get(), nullptr, &m_hdrRtv));
 
-
 		D3D11_TEXTURE2D_DESC dd = {};
 		dd.Width = width;
 		dd.Height = height;
@@ -299,6 +303,13 @@ namespace EnvironmentalEngine{
 		bd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
 		Check(m_device->CreateBlendState(&bd, &m_additiveBlend));
+
+		D3D11_BUFFER_DESC tbd = {};
+		tbd.ByteWidth = sizeof(tonemapConstants);
+		tbd.Usage = D3D11_USAGE_DYNAMIC;
+		tbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		tbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		Check(m_device->CreateBuffer(&tbd, nullptr, &m_tonemapBuffer));
 	}
 
 	Renderer::~Renderer()
@@ -320,8 +331,8 @@ namespace EnvironmentalEngine{
 		}
 
 		const float clear[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), m_depthView.Get());
-		m_context->ClearRenderTargetView(m_rtv.Get(), clear);
+		m_context->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), m_depthView.Get());
+		m_context->ClearRenderTargetView(m_hdrRtv.Get(), clear);
 		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 0.0f, 0);
 		m_context->OMSetDepthStencilState(m_depthState.Get(), 0);
 
@@ -450,6 +461,39 @@ namespace EnvironmentalEngine{
 
 	void Renderer::EndFrame() 
     {
+		static float exposure = 1.0;
+
+
+		if (ImGui::CollapsingHeader("Tonemap")) {
+			ImGui::DragFloat("Exposure", &exposure, 0.01f);
+		}
+
+		tonemapConstants consts = {};
+		XMStoreFloat(&consts.exposure, XMVectorSet(exposure, 0.0f, 0.0f, 0.0f));
+
+		D3D11_MAPPED_SUBRESOURCE mapped = {};
+		m_context->Map(m_tonemapBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &consts, sizeof(consts));
+		m_context->Unmap(m_tonemapBuffer.Get(), 0);
+
+		m_context->VSSetConstantBuffers(0, 1, m_tonemapBuffer.GetAddressOf());
+		m_context->PSSetConstantBuffers(0, 1, m_tonemapBuffer.GetAddressOf());
+
+		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
+
+		m_context->PSSetShaderResources(0, 1, m_hdrSrv.GetAddressOf());
+
+		m_context->VSSetShader(m_tonemapVS.Get(), nullptr, 0);
+		m_context->PSSetShader(m_tonemapPS.Get(), nullptr, 0);
+		m_context->IASetInputLayout(nullptr);
+		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_context->Draw(3, 0);
+
+		ID3D11ShaderResourceView* nullsrv = nullptr;
+		m_context->PSSetShaderResources(0, 1, &nullsrv);
+
+
+
 		ImGui::End();
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -594,6 +638,20 @@ namespace EnvironmentalEngine{
 			nullptr, &m_atmoPS
 
 
+		));
+
+		std::wstring tonemapPath = ExeDir() + L"toneMap.hlsl";
+		auto tmvs = LoadShaderByteCode(tonemapPath.c_str(), "VSMain", "vs_5_0");
+		auto tmps = LoadShaderByteCode(tonemapPath.c_str(), "PSMain", "ps_5_0");
+
+		Check(m_device->CreateVertexShader(
+			tmvs->GetBufferPointer(), tmvs->GetBufferSize(),
+			nullptr, &m_tonemapVS
+		));
+
+		Check(m_device->CreatePixelShader(
+			tmps->GetBufferPointer(), tmps->GetBufferSize(),
+			nullptr, &m_tonemapPS
 		));
     }
 
@@ -758,7 +816,7 @@ namespace EnvironmentalEngine{
 		m_context->PSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
 
 
-		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
+		m_context->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), nullptr);
 		m_context->VSSetShader(m_atmoVS.Get(), nullptr, 0);
 		m_context->PSSetShader(m_atmoPS.Get(), nullptr, 0);
 		m_context->IASetInputLayout(nullptr);
