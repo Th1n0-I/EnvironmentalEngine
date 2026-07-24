@@ -63,6 +63,10 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_depthSrv;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState>  m_depthState;
 
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_hdrTex;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_hdrRtv;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_hdrSrv;
+
 		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_atmoVS;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_atmoPS;
 

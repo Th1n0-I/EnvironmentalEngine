@@ -10,6 +10,10 @@ cbuffer AtmosphereConstants : register(b0)
     float scaleHeight;
     float3 rayleighCoeff;
     float sunIntensity;
+    float mieCoeff;
+    float mieScaleHeight;
+    float mieG;
+    float padding0;
 };
 
 Texture2D depthTex : register(t0);
@@ -28,6 +32,8 @@ VSOutput VSMain(uint id : SV_VertexID){
     return o;
 }
 
+static const float PI = 3.14159265;
+
 float2 raySphere(float3 center, float radius, float3 origin, float3 rayDir)
 {
     float3 oc = origin - center;
@@ -41,7 +47,11 @@ float2 raySphere(float3 center, float radius, float3 origin, float3 rayDir)
 
 }
 
-static const float PI = 3.14159265;
+float miePhase(float cosT)
+{
+    float g2 = mieG * mieG;
+    return (3.0 * (1.0 - g2)) / (2.0 * (2.0 + g2)) * (1.0 + cosT * cosT) / pow(1.0 + g2 - 2.0 * mieG * cosT, 1.5);
+}
 
 float4 PSMain(VSOutput input) : SV_Target
 {
@@ -73,33 +83,43 @@ float4 PSMain(VSOutput input) : SV_Target
     
     const int STEPS = 16, LIGHT_STEPS = 16;
     float stepSize = (tFar - tNear) / STEPS;
-    float viewOD = 0.0;
-    float3 inScatter = 0.0;
+    float viewODr = 0.0, viewODm = 0.0;
+    float3 sumR = 0.0, sumM = 0.0;
     
     for (int i = 0; i < STEPS; i++)
     {
         float3 p = campos + rayDir * (tNear + (i + 0.5) * stepSize);
         float h = length(p - planetCenter) - innerRadius;
-        float d = exp(-h / scaleHeight) * stepSize;
-        viewOD += d;
+        
+        float dr = exp(-h / scaleHeight) * stepSize;
+        float dm = exp(-h / mieScaleHeight) * stepSize;
+        viewODr += dr;
+        viewODm += dm;
         
         float lightFar = raySphere(planetCenter, outerRadius, p, dirToSun).y;
         float lStep = lightFar / LIGHT_STEPS;
-        float sunOD = 0.0;
+        float sunODr = 0.0, sunODm = 0.0;
         for (int j = 0; j < LIGHT_STEPS; j++)
         {
             float3 lp = p + dirToSun * ((j + 0.5) * lStep);
             float lh = length(lp - planetCenter) - innerRadius;
-            sunOD += exp(-lh / scaleHeight) * lStep;
+            sunODr += exp(-lh / scaleHeight) * lStep;
+            sunODm += exp(-lh / mieScaleHeight) * lStep;
+
         }
 
-        float3 transmittance = exp(-rayleighCoeff * (viewOD + sunOD));
-        inScatter += d * transmittance;
+        float3 tau = rayleighCoeff * (viewODr + sunODr) + mieCoeff * 1.1 * (viewODm + sunODm);
+        float3 transmittance = exp(-tau);
+        
+        sumR += dr * transmittance;
+        sumM += dm * transmittance;
     }
     
     float cosT = dot(rayDir, dirToSun);
-    float phase = 3.0 / (16.0 * PI) * (1.0 + cosT * cosT);
-    inScatter *= rayleighCoeff * phase * sunIntensity;
+    float phaseR = 3.0 / (16.0 * PI) * (1.0 + cosT * cosT);
+    float phaseM = miePhase(cosT);
+    
+    float3 inScatter = (sumR * rayleighCoeff * phaseR + sumM * mieCoeff * phaseM) * sunIntensity;
     
     return float4(inScatter, 1.0);
 }

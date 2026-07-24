@@ -12,6 +12,7 @@ namespace EnvironmentalEngine {
 		float radius = 1000.0f;
 		float innerRadius = 1000.0f, outerRadius = 1025.0f, scaleHeight = 3.0f, sunIntensity = 20.0f;
 		DirectX::XMFLOAT3 rayleighCoeff = { 0.0232f, 0.0540f, 0.1324f };
+		float mieCoeff = 0.02f, mieScaleHeight, mieG = 0.76;
 
 
 		std::unique_ptr<node> roots[6];
@@ -22,6 +23,7 @@ namespace EnvironmentalEngine {
 
 			scaleHeight = r * 0.003f;
 			rayleighCoeff = { 23.2f / r, 54.0f / r, 132.4f / r };
+			mieScaleHeight = scaleHeight * 0.15f;
 
 			for (UINT f = 0; f < 6; f++) {
 				roots[f] = std::make_unique<node>(

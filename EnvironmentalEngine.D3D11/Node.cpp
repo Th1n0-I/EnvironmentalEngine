@@ -74,12 +74,13 @@ namespace EnvironmentalEngine {
 				mtn = powf(mtn, sharpness);
 
 				float mask = smoothstep(0.65f, 0.8f, base);
-				float mtnStrength = 0.6f;
+				float mtnStrength = 0.01f;
 				float strength = 0.15f;
 				float e = base + mtn * mask * mtnStrength;
 
 				float seaLevel = 0.5f;
 				float land = max(e - seaLevel, 0.0f);
+				land = powf(land, 2.0f);
 
 				float h = radius * (1.0f + strength * land);
 

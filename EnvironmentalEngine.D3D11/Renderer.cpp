@@ -79,6 +79,10 @@ struct atmosphereConstants {
 	float scaleHeight;
 	XMFLOAT3 rayleighCoeff;
 	float sunIntensity;
+	float mieCoeff;
+	float mieScaleHeight;
+	float mieG;
+	float padding0;
 };
 
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
@@ -134,6 +138,20 @@ namespace EnvironmentalEngine{
 		ComPtr<ID3D11Texture2D> backBuffer;
 		Check(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
 		Check(m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_rtv));
+
+		D3D11_TEXTURE2D_DESC hdrd = {};
+		hdrd.Width = width;
+		hdrd.Height = height;
+		hdrd.MipLevels = 1;
+		hdrd.ArraySize = 1;
+		hdrd.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		hdrd.SampleDesc.Count = 1;
+		hdrd.Usage = D3D11_USAGE_DEFAULT;
+		hdrd.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+		Check(m_device->CreateTexture2D(&hdrd, nullptr, &m_hdrTex));
+		Check(m_device->CreateShaderResourceView(m_hdrTex.Get(), nullptr, &m_hdrSrv));
+		Check(m_device->CreateRenderTargetView(m_hdrTex.Get(), nullptr, &m_hdrRtv));
 
 		D3D11_TEXTURE2D_DESC dd = {};
 		dd.Width = width;
@@ -209,6 +227,21 @@ namespace EnvironmentalEngine{
 		vp.Height = static_cast<float>(height);
 		vp.MaxDepth = 1.0f;
 		m_context->RSSetViewports(1, &vp);
+
+		D3D11_TEXTURE2D_DESC hdrd = {};
+		hdrd.Width = width;
+		hdrd.Height = height;
+		hdrd.MipLevels = 1;
+		hdrd.ArraySize = 1;
+		hdrd.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		hdrd.SampleDesc.Count = 1;
+		hdrd.Usage = D3D11_USAGE_DEFAULT;
+		hdrd.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+		Check(m_device->CreateTexture2D(&hdrd, nullptr, &m_hdrTex));
+		Check(m_device->CreateShaderResourceView(m_hdrTex.Get(), nullptr, &m_hdrSrv));
+		Check(m_device->CreateRenderTargetView(m_hdrTex.Get(), nullptr, &m_hdrRtv));
+
 
 		D3D11_TEXTURE2D_DESC dd = {};
 		dd.Width = width;
@@ -614,7 +647,7 @@ namespace EnvironmentalEngine{
 
 					float mask = smoothstep(0.65f, 0.8f, base);
 					float mtnStrength = 0.6f;
-					float strength = 0.15f;
+					float strength = 0.002f;
 					float e = base + mtn * mask * mtnStrength;
 
 					float seaLevel = 0.5f;
@@ -689,11 +722,14 @@ namespace EnvironmentalEngine{
 
 		if (ImGui::CollapsingHeader("Atmosphere")) {
 			ImGui::DragFloat3("Planet center", &m_planet->center.x);
-			ImGui::ColorPicker3("Rayleigh", &m_planet->rayleighCoeff.x);
+			ImGui::ColorPicker3("Rayleigh coefficient", &m_planet->rayleighCoeff.x);
 			ImGui::DragFloat("Inner Radius", &m_planet->innerRadius, 0.01f);
 			ImGui::DragFloat("Outer Radius", &m_planet->outerRadius, 0.01f);
 			ImGui::DragFloat("Scale height", &m_planet->scaleHeight, 0.001f);
 			ImGui::DragFloat("Sun intensity", &m_planet->sunIntensity, 0.1f);
+			ImGui::DragFloat("Mie coefficient", &m_planet->mieCoeff, 0.001f);
+			ImGui::DragFloat("Mie scale height", &m_planet->mieScaleHeight, 0.01f);
+			ImGui::DragFloat("Mie scatter G", &m_planet->mieG, 0.01f);
 		}
 
 		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, m_viewMatrix * m_projMatrix);
@@ -706,8 +742,11 @@ namespace EnvironmentalEngine{
 		XMStoreFloat3(&ac.planetCenter, XMVectorSet(m_planet->center.x, m_planet->center.y, m_planet->center.z, 0.0f));
 		XMStoreFloat(&ac.innerRadius, XMVectorSet(m_planet->innerRadius, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&ac.outerRadius, XMVectorSet(m_planet->outerRadius, 0.0f, 0.0f, 0.0f));
-		XMStoreFloat(&ac.scaleHeight, XMVectorSet(m_planet->innerRadius, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.scaleHeight, XMVectorSet(m_planet->scaleHeight, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&ac.sunIntensity, XMVectorSet(m_planet->sunIntensity, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.mieCoeff, XMVectorSet(m_planet->mieCoeff, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.mieScaleHeight, XMVectorSet(m_planet->mieScaleHeight, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&ac.mieG, XMVectorSet(m_planet->mieG, 0.0f, 0.0f, 0.0f));
 
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
