@@ -5,6 +5,7 @@
 #include <vector>
 #include <future>
 #include "Mesh.h"
+#include "ThreadPool.h"
 
 namespace EnvironmentalEngine {
 	struct ChunkData {
@@ -99,6 +100,6 @@ namespace EnvironmentalEngine {
 		return n.children[0] == nullptr;
 	}
 
-	void UpdateLOD(ID3D11Device* device, node& n, DirectX::XMFLOAT3 camPos, DirectX::XMFLOAT3 center, float radus);
+	void UpdateLOD(ID3D11Device* device, node& n, DirectX::XMFLOAT3 camPos, DirectX::XMFLOAT3 center, float radus, ThreadPool& pool);
 }
 

@@ -123,7 +123,7 @@ namespace EnvironmentalEngine {
 
 	}
 
-	void UpdateLOD(ID3D11Device* device  ,node& n, XMFLOAT3 camPos, XMFLOAT3 center, float radius) {
+	void UpdateLOD(ID3D11Device* device  ,node& n, XMFLOAT3 camPos, XMFLOAT3 center, float radius, ThreadPool& pool) {
 		
 		XMFLOAT3 localCamPos = XMFLOAT3{camPos.x - center.x, camPos.y - center.y, camPos.z - center.z};
 
@@ -162,7 +162,7 @@ namespace EnvironmentalEngine {
 			}
 			else if (n.level < MAX && distSq < thresholdSq) {
 				for (int i = 0; i < 4; i++) {
-					n.pendingChildren[i] = std::async(std::launch::async, GenerateChunk, n.face, n.quadMin(i), n.quadMax(i), radius);
+					n.pendingChildren[i] = pool.enqueue( GenerateChunk, n.face, n.quadMin(i), n.quadMax(i), radius);
 					n.pendingSplit = true;
 				}
 			}
@@ -175,7 +175,7 @@ namespace EnvironmentalEngine {
 			}
 			else {
 				for (auto& c : n.children) {
-					UpdateLOD(device, *c, camPos, center, radius);
+					UpdateLOD(device, *c, camPos, center, radius, pool);
 				}
 			}
 		}

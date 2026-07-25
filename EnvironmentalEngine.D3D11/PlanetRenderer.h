@@ -17,7 +17,7 @@ namespace EnvironmentalEngine {
 
 		std::unique_ptr<node> roots[6];
 
-		PlanetRenderer(ID3D11Device* device, DirectX::XMFLOAT3 c, float r) : center(c), radius(r) {
+		PlanetRenderer(ID3D11Device* device, DirectX::XMFLOAT3 c, float r) : center(c), radius(r), threadPool((std::max)(2u, std::thread::hardware_concurrency()) - 1) {
 			innerRadius = r;
 			outerRadius = r * 1.025f;
 
@@ -29,7 +29,7 @@ namespace EnvironmentalEngine {
 			std::future<node> futures[6];
 
 			for (UINT f = 0; f < 6; f++) {
-				futures[f] = std::async(std::launch::async, MakeNode, f, DirectX::XMFLOAT2{ 0.0f, 0.0f }, DirectX::XMFLOAT2{ 1.0f, 1.0f }, 0, radius);
+				futures[f] = threadPool.enqueue( MakeNode, f, DirectX::XMFLOAT2{ 0.0f, 0.0f }, DirectX::XMFLOAT2{ 1.0f, 1.0f }, 0, radius);
 
 			}
 			for (UINT f = 0; f < 6; f++) {
@@ -40,8 +40,10 @@ namespace EnvironmentalEngine {
 
 		void Update(ID3D11Device* device, DirectX::XMFLOAT3 camPos) {
 			for (UINT f = 0; f < 6; f++) {
-				UpdateLOD(device, *roots[f], camPos, center, radius);
+				UpdateLOD(device, *roots[f], camPos, center, radius, threadPool);
 			}
 		}
+	private:
+		ThreadPool threadPool;
 	};
 }
