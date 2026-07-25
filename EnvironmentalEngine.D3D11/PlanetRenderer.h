@@ -4,6 +4,7 @@
 #include "Node.h"
 #include <memory>
 #include <d3d11.h>
+#include <future>
 
 namespace EnvironmentalEngine {
 	class PlanetRenderer {
@@ -13,7 +14,6 @@ namespace EnvironmentalEngine {
 		float innerRadius = 1000.0f, outerRadius = 1025.0f, scaleHeight = 3.0f, sunIntensity = 20.0f;
 		DirectX::XMFLOAT3 rayleighCoeff = { 0.0232f, 0.0540f, 0.1324f };
 		float mieCoeff = 0.02f, mieScaleHeight, mieG = 0.76;
-
 
 		std::unique_ptr<node> roots[6];
 
@@ -26,10 +26,14 @@ namespace EnvironmentalEngine {
 			mieScaleHeight = scaleHeight * 0.15f;
 			mieCoeff = 21.0f / r;
 
+			std::future<node> futures[6];
+
 			for (UINT f = 0; f < 6; f++) {
-				roots[f] = std::make_unique<node>(
-					MakeNode(f, { 0.0f, 0.0f }, { 1.0f, 1.0f }, 0, radius)
-				);
+				futures[f] = std::async(std::launch::async, MakeNode, f, DirectX::XMFLOAT2{ 0.0f, 0.0f }, DirectX::XMFLOAT2{ 1.0f, 1.0f }, 0, radius);
+
+			}
+			for (UINT f = 0; f < 6; f++) {
+				roots[f] = std::make_unique<node>(futures[f].get());
 				UploadNode(device, *roots[f]);
 			}
 		}

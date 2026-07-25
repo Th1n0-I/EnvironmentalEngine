@@ -3,10 +3,11 @@
 #include <memory>
 #include <algorithm>
 #include <vector>
+#include <future>
 #include "Mesh.h"
 
 namespace EnvironmentalEngine {
-	struct chunkData {
+	struct ChunkData {
 		std::vector<Vertex> vertices;
 		std::vector<UINT> indices;
 	};
@@ -16,9 +17,12 @@ namespace EnvironmentalEngine {
 		DirectX::XMFLOAT2 uvMin, uvMax;
 		UINT level;
 		DirectX::XMFLOAT3 center, AABBMin, AABBMax;
-		chunkData chunkData;
+		ChunkData chunkData;
 		std::unique_ptr<node> children[4];
 		std::unique_ptr<Mesh> mesh;
+
+		bool pendingSplit;
+		std::future<ChunkData> pendingChildren[4];
 
 		DirectX::XMFLOAT2 quadMin(UINT i) {
 			DirectX::XMFLOAT2 mid = DirectX::XMFLOAT2{ (uvMin.x + uvMax.x) * 0.5f, (uvMin.y + uvMax.y) * 0.5f };
@@ -59,14 +63,21 @@ namespace EnvironmentalEngine {
 
 	
 
-	chunkData GenerateChunk(UINT face, DirectX::XMFLOAT2 uvMin, DirectX::XMFLOAT2 uvMax, float radius);
+	ChunkData GenerateChunk(UINT face, DirectX::XMFLOAT2 uvMin, DirectX::XMFLOAT2 uvMax, float radius);
 
 	DirectX::XMVECTOR CubePos(UINT face, DirectX::XMFLOAT2 uv);
 
-	inline node MakeNode(UINT face, DirectX::XMFLOAT2 uvMin, DirectX::XMFLOAT2 uvMax, UINT level, float radius) {
+	inline node BuildNode(UINT face, DirectX::XMFLOAT2 uvMin, DirectX::XMFLOAT2 uvMax, UINT level, float radius) {
 		node n = { face, uvMin, uvMax, level };
 		DirectX::XMFLOAT2 uvCenter = DirectX::XMFLOAT2{ (uvMin.x + uvMax.x) * 0.5f, (uvMin.y + uvMax.y) * 0.5f };
-		DirectX::XMStoreFloat3(&n.center, DirectX::XMVectorScale( DirectX::XMVector3Normalize(CubePos(face, uvCenter)), radius));
+		DirectX::XMStoreFloat3(&n.center, DirectX::XMVectorScale(DirectX::XMVector3Normalize(CubePos(face, uvCenter)), radius));
+		
+
+		return n;
+	}
+
+	inline node MakeNode(UINT face, DirectX::XMFLOAT2 uvMin, DirectX::XMFLOAT2 uvMax, UINT level, float radius) {
+		node n = BuildNode(face, uvMin, uvMax, level, radius);
 		n.chunkData = GenerateChunk(face, uvMin, uvMax, radius);
 		n.AABBMin = { n.chunkData.vertices[0].x, n.chunkData.vertices[0].y, n.chunkData.vertices[0].z };
 		n.AABBMax = n.AABBMin;
@@ -74,7 +85,6 @@ namespace EnvironmentalEngine {
 			n.AABBMin.x = (std::min)(v.x, n.AABBMin.x); n.AABBMin.y = (std::min)(v.y, n.AABBMin.y); n.AABBMin.z = (std::min)(v.z, n.AABBMin.z);
 			n.AABBMax.x = (std::max)(v.x, n.AABBMax.x); n.AABBMax.y = (std::max)(v.y, n.AABBMax.y); n.AABBMax.z = (std::max)(v.z, n.AABBMax.z);
 		}
-
 		return n;
 	}
 

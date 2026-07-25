@@ -2,6 +2,7 @@
 #include "Node.h"
 #include "FastNoiseLite.h"
 #include "MathHelper.h"
+#include <chrono>
 
 
 using namespace DirectX;
@@ -38,7 +39,7 @@ namespace EnvironmentalEngine {
 		return cubePos;
 	}
 
-	chunkData GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax, float radius) {
+	ChunkData GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax, float radius) {
 
 		UINT res = 16;
 
@@ -116,7 +117,7 @@ namespace EnvironmentalEngine {
 			vertices[ic].nx += fn.x; vertices[ic].ny += fn.y; vertices[ic].nz += fn.z;
 		}
 
-		chunkData chunkData = { vertices, indices };
+		ChunkData chunkData = { vertices, indices };
 
 		return chunkData;
 
@@ -139,10 +140,30 @@ namespace EnvironmentalEngine {
 		float distSq = dx * dx + dy * dy + dz * dz;
 
 		if (isLeaf(n)) {
-			if (n.level < MAX && distSq < thresholdSq) {
+			if (n.pendingSplit) {
 				for (int i = 0; i < 4; i++) {
-					n.children[i] = std::make_unique<node>(MakeNode(n.face, n.quadMin(i), n.quadMax(i), n.level + 1, radius));
+					if (n.pendingChildren[i].wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+						return;
+					}
+				}
+				for (int i = 0; i < 4; i++) {
+					n.children[i] = std::make_unique<node>(BuildNode(n.face, n.quadMin(i), n.quadMax(i), n.level + 1, radius));
+					n.children[i]->chunkData = n.pendingChildren[i].get();
+					n.children[i]->AABBMin = { n.children[i]->chunkData.vertices[0].x, n.children[i]->chunkData.vertices[0].y, n.children[i]->chunkData.vertices[0].z};
+					n.children[i]->AABBMax = n.children[i]->AABBMin;
+					for (auto& v : n.children[i]->chunkData.vertices) {
+						n.children[i]->AABBMin.x = (std::min)(v.x, n.children[i]->AABBMin.x); n.children[i]->AABBMin.y = (std::min)(v.y, n.children[i]->AABBMin.y); n.children[i]->AABBMin.z = (std::min)(v.z, n.children[i]->AABBMin.z);
+						n.children[i]->AABBMax.x = (std::max)(v.x, n.children[i]->AABBMax.x); n.children[i]->AABBMax.y = (std::max)(v.y, n.children[i]->AABBMax.y); n.children[i]->AABBMax.z = (std::max)(v.z, n.children[i]->AABBMax.z);
+					}
+
 					UploadNode(device, *n.children[i]);
+				}
+				n.pendingSplit = false;
+			}
+			else if (n.level < MAX && distSq < thresholdSq) {
+				for (int i = 0; i < 4; i++) {
+					n.pendingChildren[i] = std::async(std::launch::async, GenerateChunk, n.face, n.quadMin(i), n.quadMax(i), radius);
+					n.pendingSplit = true;
 				}
 			}
 		}
