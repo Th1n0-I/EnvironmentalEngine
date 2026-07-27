@@ -39,9 +39,16 @@ namespace EnvironmentalEngine {
 		return cubePos;
 	}
 
+	bool isSkirt(int res, int v) {
+		int R = res + 2;
+		int X = v / R;
+		int Y = v % R;
+		return (X == 0 || X == R - 1 || Y == 0 || Y == R - 1);
+	}
+
 	ChunkData GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax, float radius) {
 
-		UINT res = 16;
+		int res = 16;
 
 		FastNoiseLite mtnN;
 		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
@@ -60,9 +67,9 @@ namespace EnvironmentalEngine {
 		std::vector<Vertex> vertices;
 		std::vector<UINT> indices;
 
-		for (UINT x = 0; x < res; x++) {
-			for (UINT y = 0; y < res; y++) {
-				XMFLOAT2 percent = { x / (res - 1.0f), y / (res - 1.0f) };
+		for (int x = -1; x < res + 1; x++) {
+			for (int y = -1; y < res + 1; y++) {
+				XMFLOAT2 percent = { clamp(x / (res - 1.0f), 0.0f, 1.0f), clamp(y / (res - 1.0f), 0.0f, 1.0f) };
 				XMFLOAT2 uv = { lerp(uvMin.x, uvMax.x, percent.x), lerp(uvMin.y, uvMax.y, percent.y) };
 				XMVECTOR cubePos = CubePos(face, uv);
 
@@ -85,30 +92,35 @@ namespace EnvironmentalEngine {
 
 				float h = radius * (1.0f + strength * land);
 
-				vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
+				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
+				else vertices.push_back({ spherePos.x * h * 0.99f, spherePos.y * h * 0.99f, spherePos.z * h * 0.99f, 0.0f, 0.0f, 0.0f, e });
 			}
 		}
 
-		for (UINT x = 0; x < res - 1; x++) {
-			for (UINT y = 0; y < res - 1; y++) {
-				int i = x + y * res;
+		for (int x = 0; x < res + 1; x++) {
+			for (int y = 0; y < res + 1; y++) {
+				int i = x * (res + 2) + y;
 				indices.push_back(i);
-				indices.push_back(i + res);
-				indices.push_back(i + res + 1);
+				indices.push_back(i + (res + 2));
+				indices.push_back(i + (res + 2) + 1);
 
 				indices.push_back(i);
-				indices.push_back(i + res + 1);
+				indices.push_back(i + (res + 2) + 1);
 				indices.push_back(i + 1);
 			}
 		}
 
 		for (size_t t = 0; t < indices.size(); t += 3) {
+
 			UINT ia = indices[t], ib = indices[t + 1], ic = indices[t + 2];
+
+			if (isSkirt(res, ia) || isSkirt(res, ib) || isSkirt(res, ic)) continue;
 
 			XMVECTOR a = XMVectorSet(vertices[ia].x, vertices[ia].y, vertices[ia].z, 0.0f);
 			XMVECTOR b = XMVectorSet(vertices[ib].x, vertices[ib].y, vertices[ib].z, 0.0f);
 			XMVECTOR c = XMVectorSet(vertices[ic].x, vertices[ic].y, vertices[ic].z, 0.0f);
 
+			
 			XMVECTOR faceN = XMVector3Cross(b - a, c - a);
 			XMFLOAT3 fn; XMStoreFloat3(&fn, faceN);
 

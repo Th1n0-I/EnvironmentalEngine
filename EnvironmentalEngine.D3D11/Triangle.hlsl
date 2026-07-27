@@ -111,6 +111,6 @@ float4 PSMain(VSOutput input) : SV_Target
     float3 specular = lightColor.rgb * spec * specularIntensity;
     
     
-    return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff
-    , 1.0);
+    return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff, 1.0);
+
 }
