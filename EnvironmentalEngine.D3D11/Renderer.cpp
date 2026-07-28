@@ -17,6 +17,8 @@
 #include <map>
 #include <tuple>
 #include <cmath>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -38,8 +40,6 @@ inline void Check(HRESULT hr)
 		throw std::runtime_error("D3D11 Call failed!");
 	}
 }
-
-
 
 struct PerFrameConstants {
 	
@@ -470,9 +470,11 @@ namespace EnvironmentalEngine{
 			ImGui::DragFloat("Exposure", &exposure, 0.01f);
 		}
 
+
 		tonemapConstants consts = {};
 		XMStoreFloat(&consts.exposure, XMVectorSet(exposure, 0.0f, 0.0f, 0.0f));
 
+		
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_tonemapBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &consts, sizeof(consts));
@@ -490,10 +492,8 @@ namespace EnvironmentalEngine{
 		m_context->IASetInputLayout(nullptr);
 		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_context->Draw(3, 0);
-
 		ID3D11ShaderResourceView* nullsrv = nullptr;
 		m_context->PSSetShaderResources(0, 1, &nullsrv);
-
 
 
 		ImGui::End();
@@ -793,8 +793,10 @@ namespace EnvironmentalEngine{
 
 
 	void Renderer::DrawAtmosphere(XMFLOAT3 camPos ) {
+		static bool drawAtmosphere = true;
 
 		if (ImGui::CollapsingHeader("Atmosphere")) {
+			if (ImGui::Button("Toggle atmosphere")) drawAtmosphere = !drawAtmosphere;
 			ImGui::DragFloat3("Planet center", &m_planet->center.x);
 			ImGui::ColorPicker3("Rayleigh coefficient", &m_planet->rayleighCoeff.x);
 			ImGui::DragFloat("Inner Radius", &m_planet->innerRadius, 0.01f);
@@ -805,6 +807,8 @@ namespace EnvironmentalEngine{
 			ImGui::DragFloat("Mie scale height", &m_planet->mieScaleHeight, 0.01f);
 			ImGui::DragFloat("Mie scatter G", &m_planet->mieG, 0.01f);
 		}
+
+		if (!drawAtmosphere) return;
 
 		XMMATRIX inverseViewProjection = XMMatrixInverse(nullptr, m_viewMatrix * m_projMatrix);
 		

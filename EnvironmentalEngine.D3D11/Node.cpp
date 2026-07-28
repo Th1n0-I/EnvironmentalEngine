@@ -60,7 +60,7 @@ namespace EnvironmentalEngine {
 		FastNoiseLite baseN;
 		baseN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
 		baseN.SetFractalType(FastNoiseLite::FractalType_FBm);
-		baseN.SetFractalOctaves(1);
+		baseN.SetFractalOctaves(4);
 		baseN.SetFrequency(1.0f);
 		baseN.SetFractalGain(0.5f);
 
