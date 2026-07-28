@@ -113,5 +113,6 @@
     <None Include="..\EnvironmentalEngine\Triangle.hlsl" />
     <None Include="Atmosphere.hlsl" />
     <None Include="toneMap.hlsl" />
+    <None Include="Terrain.hlsl" />
   </ItemGroup>
 </Project>

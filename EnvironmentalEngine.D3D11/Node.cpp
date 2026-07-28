@@ -60,7 +60,7 @@ namespace EnvironmentalEngine {
 		FastNoiseLite baseN;
 		baseN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
 		baseN.SetFractalType(FastNoiseLite::FractalType_FBm);
-		baseN.SetFractalOctaves(4);
+		baseN.SetFractalOctaves(1);
 		baseN.SetFrequency(1.0f);
 		baseN.SetFractalGain(0.5f);
 
@@ -76,24 +76,13 @@ namespace EnvironmentalEngine {
 				XMFLOAT3 spherePos;
 				XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
 				float base = baseN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
-				float mtn = mtnN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
+				
+				float e = base;	
 
-				float sharpness = 2.0f;
-				mtn = powf(mtn, sharpness);
-
-				float mask = smoothstep(0.65f, 0.8f, base);
-				float mtnStrength = 0.01f;
-				float strength = 0.15f;
-				float e = base + mtn * mask * mtnStrength;
-
-				float seaLevel = 0.5f;
-				float land = max(e - seaLevel, 0.0f);
-				land = powf(land, 2.0f);
-
-				float h = radius * (1.0f + strength * land);
+				float h = radius;
 
 				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
-				else vertices.push_back({ spherePos.x * h * 0.99f, spherePos.y * h * 0.99f, spherePos.z * h * 0.99f, 0.0f, 0.0f, 0.0f, e });
+				else vertices.push_back({ spherePos.x * 0.99f * h, spherePos.y * 0.99f * h, spherePos.z * 0.99f * h, 0.0f, 0.0f, 0.0f, e });
 			}
 		}
 

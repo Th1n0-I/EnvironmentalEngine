@@ -96,12 +96,12 @@ float4 PSMain(VSOutput input) : SV_Target
         viewODr += dr;
         viewODm += dm;
         
-        float lightFar = raySphere(planetCenter, outerRadius, p, dirToSun).y;
+        float lightFar = raySphere(planetCenter, outerRadius, p, normalize(dirToSun)).y;
         float lStep = lightFar / LIGHT_STEPS;
         float sunODr = 0.0, sunODm = 0.0;
         for (int j = 0; j < LIGHT_STEPS; j++)
         {
-            float3 lp = p + dirToSun * ((j + 0.5) * lStep);
+            float3 lp = p + normalize(dirToSun) * ((j + 0.5) * lStep);
             float lh = length(lp - planetCenter) - innerRadius;
             sunODr += exp(-lh / scaleHeight) * lStep;
             sunODm += exp(-lh / mieScaleHeight) * lStep;
@@ -117,7 +117,7 @@ float4 PSMain(VSOutput input) : SV_Target
         sumMulti += dr * transMulti;
     }
     
-    float cosT = dot(rayDir, dirToSun);
+    float cosT = dot(rayDir, normalize(dirToSun));
     float phaseR = 3.0 / (16.0 * PI) * (1.0 + cosT * cosT);
     float phaseM = miePhase(cosT);
     

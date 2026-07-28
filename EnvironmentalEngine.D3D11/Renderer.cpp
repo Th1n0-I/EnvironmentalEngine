@@ -451,6 +451,8 @@ namespace EnvironmentalEngine{
 		m_context->Unmap(m_perObjectBuffer.Get(), 0);
 
 		//m_context->RSSetState(m_wireframe.Get());
+		m_context->VSSetShader(m_terrainVS.Get(), nullptr, 0);
+		m_context->PSSetShader(m_terrainPS.Get(), nullptr, 0);
 
 		for (auto& n : m_planet->roots) {
 			DrawNode(m_context.Get(), *n);
@@ -652,6 +654,20 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreatePixelShader(
 			tmps->GetBufferPointer(), tmps->GetBufferSize(),
 			nullptr, &m_tonemapPS
+		));
+
+		std::wstring terrainPath = ExeDir() + L"Terrain.hlsl";
+		auto tvs = LoadShaderByteCode(terrainPath.c_str(), "VSMain", "vs_5_0");
+		auto tps = LoadShaderByteCode(terrainPath.c_str(), "PSMain", "ps_5_0");
+
+		Check(m_device->CreateVertexShader(
+			tvs->GetBufferPointer(), tvs->GetBufferSize(),
+			nullptr, &m_terrainVS
+		));
+
+		Check(m_device->CreatePixelShader(
+			tps->GetBufferPointer(), tps->GetBufferSize(),
+			nullptr, &m_terrainPS
 		));
     }
 

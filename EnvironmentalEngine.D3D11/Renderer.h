@@ -74,6 +74,9 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_tonemapVS;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_tonemapPS;
 
+		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_terrainVS;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_terrainPS;
+
 		Microsoft::WRL::ComPtr<ID3D11BlendState> m_additiveBlend;
 
 		DirectX::XMMATRIX m_viewMatrix;

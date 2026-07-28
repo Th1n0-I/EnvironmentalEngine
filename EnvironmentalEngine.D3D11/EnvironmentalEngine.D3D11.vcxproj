@@ -125,7 +125,8 @@
     <PostBuildEvent>
       <Command>xcopy /Y "$(ProjectDir)Triangle.hlsl" "$(OutDir)"
 xcopy /Y "$(ProjectDir)Atmosphere.hlsl" "$(OutDir)"
-xcopy /Y "$(ProjectDir)toneMap.hlsl" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)toneMap.hlsl" "$(OutDir)"
+xcopy /Y "$(ProjectDir)Terrain.hlsl" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -219,6 +220,11 @@ xcopy /Y "$(ProjectDir)toneMap.hlsl" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <None Include="toneMap.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Terrain.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
