@@ -1,3 +1,6 @@
+Texture2D biomeLUT : register(t0);
+SamplerState biomeSamp : register(s0);
+
 cbuffer PerFrameConstants : register(b0)
 {
     float3 camPos;
@@ -14,7 +17,7 @@ cbuffer PerFrameConstants : register(b0)
     float padding3;
 };
 
-cbuffer PerObjectConstants : register(b1)
+cbuffer PerPlanetConstants : register(b1)
 {
     float4x4 transform;
     float4x4 world;
@@ -22,7 +25,8 @@ cbuffer PerObjectConstants : register(b1)
     float4 cubeColor;
     float specularIntensity;
     float smoothness;
-    float padding[2];
+    float percipitationThingy;
+    float padding;
 }
 
 struct VSInput
@@ -78,6 +82,28 @@ float3 get_color_from_temperature(float temperature)
     return finalColor;
 }
 
+float get_percipitation_from_temperature(float percipitation, float temperature)
+{
+    float perp = percipitation * 0.5 + 0.5;
+    float ceiling = pow(percipitationThingy, lerp(-15.0, 30.0, temperature)) / pow(percipitationThingy, 30.0);
+    perp = perp * ceiling;
+    return perp;
+}
+
+float3 get_biome(float percipitation, float temperature)
+{
+    
+    float newPerp = get_percipitation_from_temperature(percipitation, temperature);
+    
+    float2 uv;
+    
+    uv.x = newPerp;
+    uv.y = temperature;
+    
+    float3 result = biomeLUT.Sample(biomeSamp, uv);
+    return result;
+}
+
 VSOutput VSMain(VSInput input)
 {
     VSOutput output;
@@ -128,10 +154,13 @@ float4 PSMain(VSOutput input) : SV_Target
     float3 diffuse = lightColor.rgb * diff;
     float3 specular = lightColor.rgb * spec * specularIntensity;
     
-    return float4(get_color_from_temperature(input.temp), 1.0); // Debug temperature
+    
 
     //return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff, 1.0);
     //return float4(get_color_from_elevation(input.elevation), 1.0); // Debug biomes
     //return float4(get_color_from_percipitation(input.perp), 1.0); // Debug percipitiation
-    
+    //return float4(get_color_from_temperature(input.temp), 1.0); // Debug temperature
+    //return float4(get_color_from_percipitation(get_percipitation_from_temperature(input.perp, input.temp)), 1.0); // Debug percipitation based on temp
+    return float4(get_biome(input.perp, input.temp), 1.0); // Debug biomes
+
 }

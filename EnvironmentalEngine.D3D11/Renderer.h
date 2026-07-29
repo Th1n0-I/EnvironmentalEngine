@@ -78,6 +78,9 @@ namespace EnvironmentalEngine {
 
 		Microsoft::WRL::ComPtr<ID3D11BlendState> m_additiveBlend;
 
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_biomeSrv;
+		Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_biomeSampler;
+
 		DirectX::XMMATRIX m_viewMatrix;
 		DirectX::XMMATRIX m_projMatrix;
 

@@ -69,6 +69,17 @@ struct PerObjectConstants {
 	float padding[2];
 };
 
+struct PerPlanetConstants {
+	XMFLOAT4X4 transform;
+	XMFLOAT4X4 world;
+	XMFLOAT4X4 normal;
+	XMFLOAT4 cubeColor;
+	float specularIntensity;
+	float smoothness;
+	float percipitationThingy;
+	float padding;
+};
+
 struct atmosphereConstants {
 	XMFLOAT4X4 invViewProj;
 	XMFLOAT3 camPos;
@@ -429,6 +440,11 @@ namespace EnvironmentalEngine{
 	}
 
 	void Renderer::DrawPlanet() {
+
+		static float pT = 1.07f;
+
+		ImGui::DragFloat("Percipitation thingy", &pT, 0.01f);
+
 		XMMATRIX world =
 			XMMatrixTranslation(m_planet->center.x, m_planet->center.y, m_planet->center.z);
 
@@ -436,7 +452,7 @@ namespace EnvironmentalEngine{
 
 		XMMATRIX normal = XMMatrixInverse(nullptr, world);
 
-		PerObjectConstants constants = {};
+		PerPlanetConstants constants = {};
 		XMStoreFloat4x4(&constants.transform, XMMatrixTranspose(final));
 		XMStoreFloat4x4(&constants.world, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&constants.normal, normal);
@@ -444,6 +460,7 @@ namespace EnvironmentalEngine{
 		XMStoreFloat4(&constants.cubeColor, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&constants.specularIntensity, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&constants.smoothness, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&constants.percipitationThingy, XMVectorSet(pT, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
 		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -454,6 +471,9 @@ namespace EnvironmentalEngine{
 		m_context->VSSetShader(m_terrainVS.Get(), nullptr, 0);
 		m_context->PSSetShader(m_terrainPS.Get(), nullptr, 0);
 		m_context->IASetInputLayout(m_terrainInputLayout.Get());
+
+		m_context->PSSetShaderResources(0, 1, m_biomeSrv.GetAddressOf());  
+		m_context->PSSetSamplers(0, 1, m_biomeSampler.GetAddressOf());   
 
 		for (auto& n : m_planet->roots) {
 			DrawNode(m_context.Get(), *n);
@@ -685,6 +705,40 @@ namespace EnvironmentalEngine{
 			tvs->GetBufferPointer(), tvs->GetBufferSize(),
 			&m_terrainInputLayout
 		));
+
+		std::wstring texturePath = ExeDir() + L"BiomeMap.png";
+		FILE* textureFile;
+		if(_wfopen_s(&textureFile, texturePath.c_str(), L"rb") != 0 || !textureFile)
+		{
+			throw std::runtime_error("biomeMap.png not found");
+		}
+		int w, h, n;
+		unsigned char* px = stbi_load_from_file(textureFile, &w, &h, &n, 4);
+		fclose(textureFile);
+		if (!px) throw std::runtime_error("biomeMap.png failed to decode");
+
+		D3D11_TEXTURE2D_DESC td = {};
+		td.Width = w; td.Height = h;
+		td.MipLevels = 1; td.ArraySize = 1;
+		td.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		td.SampleDesc.Count = 1;
+		td.Usage = D3D11_USAGE_DEFAULT;
+		td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		D3D11_SUBRESOURCE_DATA sd = {};
+		sd.pSysMem = px;
+		sd.SysMemPitch = w * 4;
+
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> biomeTex = {};
+		Check(m_device->CreateTexture2D(&td, &sd, &biomeTex));
+		Check(m_device->CreateShaderResourceView(biomeTex.Get(), nullptr, &m_biomeSrv));
+		stbi_image_free(px);
+
+		D3D11_SAMPLER_DESC smp = {};
+		smp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		smp.AddressU = smp.AddressV = smp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		smp.MaxLOD = D3D11_FLOAT32_MAX;
+		Check(m_device->CreateSamplerState(&smp, &m_biomeSampler));
     }
 
 
