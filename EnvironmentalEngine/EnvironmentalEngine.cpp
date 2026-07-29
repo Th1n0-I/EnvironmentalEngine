@@ -40,15 +40,9 @@ int main()
     AmbientLight* al1 = lightObject->AddComponent<AmbientLight>();;
     PointLight* pl1 = lightObject->AddComponent<PointLight>();;
 
-    auto object3 = std::make_unique<GameObject>();
-    object3->name = "Planet";
-    object3->transform = { {1500.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f} };
-    MeshRenderer* mr3 = object3->AddComponent<MeshRenderer>();
-    mr3->mesh = renderer.PlanetMesh();
 
     objects.push_back(std::move(planetObject));
     objects.push_back(std::move(lightObject));
-    objects.push_back(std::move(object3));
 
     while (window.ProccessMessages()) {
         Input& input = window.GetInput();

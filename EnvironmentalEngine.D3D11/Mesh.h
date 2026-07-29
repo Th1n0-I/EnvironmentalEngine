@@ -7,14 +7,20 @@ namespace EnvironmentalEngine {
 
 	struct Vertex
 	{
-		float x, y, z, nx, ny, nz, elevation;
+		float x, y, z, nx, ny, nz;
 	};
+
+	struct TerrainVertex {
+		float x, y, z, nx, ny, nz;
+		float elevation, temperature, percipitation;
+	};
+ 
 
 	class Mesh {
 	public:
 		Mesh(ID3D11Device* device,
-			const Vertex* vertices, UINT vertexCount,
-			const unsigned int* indices, UINT indexCount);
+			const void* vertexData, UINT vertexCount, UINT vertexStride,
+			const UINT* indices, UINT indexCount);
 
 		void Bind(ID3D11DeviceContext* context) const;
 		UINT IndexCount() const { return m_indexCount; }

@@ -280,7 +280,7 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateDepthStencilState(&dsd, &m_depthState));
         
 		CreateCube();
-		CreatePlanet(1, 128);
+	
 
 		m_planet = std::make_unique<PlanetRenderer>(
 			m_device.Get(), XMFLOAT3{ 0.0f, -100000.0f, 0.0f }, 100000.0f
@@ -453,6 +453,7 @@ namespace EnvironmentalEngine{
 		//m_context->RSSetState(m_wireframe.Get());
 		m_context->VSSetShader(m_terrainVS.Get(), nullptr, 0);
 		m_context->PSSetShader(m_terrainPS.Get(), nullptr, 0);
+		m_context->IASetInputLayout(m_terrainInputLayout.Get());
 
 		for (auto& n : m_planet->roots) {
 			DrawNode(m_context.Get(), *n);
@@ -506,30 +507,30 @@ namespace EnvironmentalEngine{
     {
 		Vertex vertices[] =
 		{//     x      y      z         nx     ny     nz  elevation
-			{ -0.5f, -0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f, -1.0f }, //0
-			{ -0.5f, -0.5f, -0.5f, 	   0.0f, -1.0f,  0.0f, -1.0f }, //1
-			{ -0.5f, -0.5f, -0.5f,     0.0f,  0.0f, -1.0f, -1.0f }, //2
-			{  0.5f, -0.5f, -0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //3
-			{  0.5f, -0.5f, -0.5f,	   0.0f, -1.0f,  0.0f, -1.0f }, //4
-			{  0.5f, -0.5f, -0.5f,	   0.0f,  0.0f, -1.0f, -1.0f }, //5
-			{  0.5f,  0.5f, -0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //6
-			{  0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //7
-			{  0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f, -1.0f }, //8
-			{ -0.5f,  0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f, -1.0f }, //9
-			{ -0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //10
-			{ -0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f, -1.0f }, //11
-			{ -0.5f, -0.5f,  0.5f,    -1.0f,  0.0f,  0.0f, -1.0f }, //12 
-			{ -0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f, -1.0f }, //13
-			{ -0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f, -1.0f }, //14
-			{  0.5f, -0.5f,  0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //15
-			{  0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f, -1.0f }, //16
-			{  0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f, -1.0f }, //17
-			{  0.5f,  0.5f,  0.5f,	   1.0f,  0.0f,  0.0f, -1.0f }, //18
-			{  0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //19
-			{  0.5f,  0.5f,  0.5f,     0.0f,  0.0f,  1.0f, -1.0f }, //20
-			{ -0.5f,  0.5f,  0.5f,    -1.0f,  0.0f,  0.0f, -1.0f }, //21
-			{ -0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f, -1.0f }, //22
-			{ -0.5f,  0.5f,  0.5f,	   0.0f,  0.0f,  1.0f, -1.0f }, //23
+			{ -0.5f, -0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f }, //0
+			{ -0.5f, -0.5f, -0.5f, 	   0.0f, -1.0f,  0.0f }, //1
+			{ -0.5f, -0.5f, -0.5f,     0.0f,  0.0f, -1.0f }, //2
+			{  0.5f, -0.5f, -0.5f,	   1.0f,  0.0f,  0.0f }, //3
+			{  0.5f, -0.5f, -0.5f,	   0.0f, -1.0f,  0.0f }, //4
+			{  0.5f, -0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //5
+			{  0.5f,  0.5f, -0.5f,	   1.0f,  0.0f,  0.0f }, //6
+			{  0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f }, //7
+			{  0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //8
+			{ -0.5f,  0.5f, -0.5f,	  -1.0f,  0.0f,  0.0f }, //9
+			{ -0.5f,  0.5f, -0.5f,	   0.0f,  1.0f,  0.0f }, //10
+			{ -0.5f,  0.5f, -0.5f,	   0.0f,  0.0f, -1.0f }, //11
+			{ -0.5f, -0.5f,  0.5f,    -1.0f,  0.0f,  0.0f }, //12 
+			{ -0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f }, //13
+			{ -0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //14
+			{  0.5f, -0.5f,  0.5f,	   1.0f,  0.0f,  0.0f }, //15
+			{  0.5f, -0.5f,  0.5f,	   0.0f, -1.0f,  0.0f }, //16
+			{  0.5f, -0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //17
+			{  0.5f,  0.5f,  0.5f,	   1.0f,  0.0f,  0.0f }, //18
+			{  0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f }, //19
+			{  0.5f,  0.5f,  0.5f,     0.0f,  0.0f,  1.0f }, //20
+			{ -0.5f,  0.5f,  0.5f,    -1.0f,  0.0f,  0.0f }, //21
+			{ -0.5f,  0.5f,  0.5f,	   0.0f,  1.0f,  0.0f }, //22
+			{ -0.5f,  0.5f,  0.5f,	   0.0f,  0.0f,  1.0f }, //23
 		};
 
 		unsigned int indices[] =
@@ -542,7 +543,7 @@ namespace EnvironmentalEngine{
 			10, 19,  7,		10, 22, 19,
 		};
 
-		m_cubeMesh = std::make_unique<Mesh>(m_device.Get(), vertices, sizeof(vertices) / sizeof(vertices[0]), indices, sizeof(indices) / sizeof(indices[0]));
+		m_cubeMesh = std::make_unique<Mesh>(m_device.Get(), vertices, sizeof(vertices) / sizeof(vertices[0]), sizeof(Vertex), indices, sizeof(indices) / sizeof(indices[0]));
 
 		std::vector<Vertex> sVertices;
 		std::vector<UINT> sIndices;
@@ -557,7 +558,7 @@ namespace EnvironmentalEngine{
 				float x = r * sin(phi) * cos(theta);
 				float y = r * cos(phi);
 				float z = r * sin(phi) * sin(theta);
-				sVertices.push_back({ x, y, z, x / r, y / r, z / r, -1.0f});
+				sVertices.push_back({ x, y, z, x / r, y / r, z / r});
 			}
 		}
 
@@ -572,7 +573,7 @@ namespace EnvironmentalEngine{
 			}
 		}
 
-		m_sphereMesh = std::make_unique<Mesh>(m_device.Get(), sVertices.data(), (UINT)sVertices.size(), sIndices.data(), (UINT)sIndices.size());
+		m_sphereMesh = std::make_unique<Mesh>(m_device.Get(), sVertices.data(), (UINT)sVertices.size(), sizeof(Vertex), sIndices.data(), (UINT)sIndices.size());
 
 		D3D11_BUFFER_DESC pfcbd = {};
 		pfcbd.ByteWidth = sizeof(PerFrameConstants);
@@ -616,14 +617,15 @@ namespace EnvironmentalEngine{
 		D3D11_INPUT_ELEMENT_DESC layout[] = {
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"ELEVATION", 0, DXGI_FORMAT_R32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 			
 		Check(m_device->CreateInputLayout(
-			layout, 3,
+			layout, 2,
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			&m_inputLayout
 		));
+
+		
 
 		std::wstring atmoPath = ExeDir() + L"Atmosphere.hlsl";
 		auto avs = LoadShaderByteCode(atmoPath.c_str(), "VSMain", "vs_5_0");
@@ -669,127 +671,21 @@ namespace EnvironmentalEngine{
 			tps->GetBufferPointer(), tps->GetBufferSize(),
 			nullptr, &m_terrainPS
 		));
+
+		D3D11_INPUT_ELEMENT_DESC terrainLayout[] = {
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"ELEVATION", 0, DXGI_FORMAT_R32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEMPERATURE", 0, DXGI_FORMAT_R32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"PERCIPITATION", 0, DXGI_FORMAT_R32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		};
+
+		Check(m_device->CreateInputLayout(
+			terrainLayout, 5,
+			tvs->GetBufferPointer(), tvs->GetBufferSize(),
+			&m_terrainInputLayout
+		));
     }
-
-	void Renderer::CreatePlanet(float radius, UINT res) {
-
-		FastNoiseLite mtnN;
-		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-		mtnN.SetFractalType(FastNoiseLite::FractalType_Ridged);
-		mtnN.SetFractalOctaves(5);
-		mtnN.SetFrequency(1.8f);
-		mtnN.SetFractalGain(0.5f);
-
-		FastNoiseLite baseN;
-		baseN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-		baseN.SetFractalType(FastNoiseLite::FractalType_FBm);
-		baseN.SetFractalOctaves(4);
-		baseN.SetFrequency(1.0f);
-		baseN.SetFractalGain(0.5f);
-
-		std::vector<Vertex> vertices;
-		std::vector<UINT> indices;
-		
-		XMFLOAT3 localUp[6] = { 
-			{  0.0f,  1.0f,  0.0f }, 
-			{  0.0f, -1.0f,  0.0f }, 
-			{  1.0f,  0.0f,  0.0f }, 
-			{ -1.0f,  0.0f,  0.0f }, 
-			{  0.0f,  0.0f,  1.0f }, 
-			{  0.0f,  0.0f, -1.0f } };
-		XMFLOAT3 axisA[6] = {};
-		XMFLOAT3 axisB[6] = {};
-
-		for (int s = 0; s < 6; s++){
-			axisA[s] = { localUp[s].y, localUp[s].z, localUp[s].x };
-			XMVECTOR cross = XMVector3Cross(XMVectorSet(localUp[s].x, localUp[s].y, localUp[s].z, 0.0f), XMVectorSet(axisA[s].x, axisA[s].y, axisA[s].z, 0.0f));
-			XMStoreFloat3(&axisB[s], cross);
-			for (int x = 0; x < res; x++) {
-				for (int y = 0; y < res; y++) {
-					XMFLOAT2 percent = { x / (res - 1.0f), y / (res - 1.0f)};
-					XMVECTOR cubePos = XMVectorSet(localUp[s].x, localUp[s].y, localUp[s].z, 0.0f) +
-						(percent.x - 0.5f) * 2.0f * XMVectorSet(axisA[s].x, axisA[s].y, axisA[s].z, 0.0f) +
-						(percent.y - 0.5f) * 2.0f * XMVectorSet(axisB[s].x, axisB[s].y, axisB[s].z, 0.0f);
-					
-					XMFLOAT3 spherePos;
-					XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
-					float base = baseN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
-					float mtn = mtnN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
-
-					float sharpness = 2.0f;
-					mtn = powf(mtn, sharpness);
-
-					float mask = smoothstep(0.65f, 0.8f, base);
-					float mtnStrength = 0.6f;
-					float strength = 0.002f;
-					float e = base + mtn * mask * mtnStrength;
-
-					float seaLevel = 0.5f;
-					float land = max(e - seaLevel, 0.0f);
-
-					float h = radius * (1.0f + strength * land);
-
-					vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e });
-				}
-			}
-		}
-
-		for (int s = 0; s < 6; s++) {
-			for (int x = 0; x < res - 1; x++) {
-				for (int y = 0; y < res - 1; y++) {
-					int i = x + y * res + s * res * res;
-					indices.push_back(i);
-					indices.push_back(i + res);
-					indices.push_back(i + res + 1);
-
-					indices.push_back(i);
-					indices.push_back(i + res + 1);
-					indices.push_back(i + 1);
-				}
-			}
-		}
-
-		for (size_t t = 0; t < indices.size(); t+= 3) {
-			UINT ia = indices[t], ib = indices[t + 1], ic = indices[t + 2];
-
-			XMVECTOR a = XMVectorSet(vertices[ia].x, vertices[ia].y, vertices[ia].z, 0.0f);
-			XMVECTOR b = XMVectorSet(vertices[ib].x, vertices[ib].y, vertices[ib].z, 0.0f);
-			XMVECTOR c = XMVectorSet(vertices[ic].x, vertices[ic].y, vertices[ic].z, 0.0f);
-
-			XMVECTOR faceN = XMVector3Cross(b - a, c - a);
-			XMFLOAT3 fn; XMStoreFloat3(&fn, faceN);
-
-			vertices[ia].nx += fn.x; vertices[ia].ny += fn.y; vertices[ia].nz += fn.z;
-			vertices[ib].nx += fn.x; vertices[ib].ny += fn.y; vertices[ib].nz += fn.z;
-			vertices[ic].nx += fn.x; vertices[ic].ny += fn.y; vertices[ic].nz += fn.z;
-		}
-
-		std::map<std::tuple<int, int, int>, XMFLOAT3> welded;
-
-		auto key = [](const Vertex& v) {
-			return std::make_tuple(int(std::lround(v.x * 100000.0f)),
-				int(std::lround(v.y * 100000.0f)),
-				int(std::lround(v.z * 100000.0f))
-			); };
-
-		for (auto& v : vertices) {
-			auto& n = welded[key(v)];
-			n.x += v.nx; n.y += v.ny; n.z += v.nz;
-		}
-
-		for(auto& v : vertices){
-			auto& n = welded[key(v)];
-			v.nx = n.x; v.ny = n.y; v.nz = n.z;
-		}
-
-		for (auto& v : vertices) {
-			XMVECTOR n = XMVector3Normalize(XMVectorSet(v.nx, v.ny, v.nz, 0.0f));
-			XMFLOAT3 nf; XMStoreFloat3(&nf, n);
-			v.nx = nf.x; v.ny = nf.y; v.nz = nf.z;
-		}
-
-		m_planetMesh = std::make_unique<Mesh>(m_device.Get(), vertices.data(), (UINT)vertices.size(), indices.data(), (UINT)indices.size());
-	}
 
 
 	void Renderer::DrawAtmosphere(XMFLOAT3 camPos ) {

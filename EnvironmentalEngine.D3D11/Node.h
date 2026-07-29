@@ -9,7 +9,7 @@
 
 namespace EnvironmentalEngine {
 	struct ChunkData {
-		std::vector<Vertex> vertices;
+		std::vector<TerrainVertex> vertices;
 		std::vector<UINT> indices;
 	};
 
@@ -90,7 +90,7 @@ namespace EnvironmentalEngine {
 	}
 
 	inline void UploadNode(ID3D11Device* device, node& n) {
-		n.mesh = std::make_unique<Mesh>(device, n.chunkData.vertices.data(), (UINT)n.chunkData.vertices.size(),
+		n.mesh = std::make_unique<Mesh>(device, n.chunkData.vertices.data(), (UINT)n.chunkData.vertices.size(), sizeof(TerrainVertex),
 			n.chunkData.indices.data(), (UINT)n.chunkData.indices.size());
 
 		n.chunkData = {};

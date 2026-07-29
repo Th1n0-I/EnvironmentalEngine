@@ -30,6 +30,8 @@ struct VSInput
     float3 position : POSITION;
     float3 normal : NORMAL;
     float elevation : ELEVATION;
+    float temp : TEMPERATURE;
+    float perp : PERCIPITATION;
 };
 
 struct VSOutput
@@ -38,6 +40,8 @@ struct VSOutput
     float3 worldPos : TEXCOORD0;
     float3 normal : NORMAL;
     float elevation : ELEVATION;
+    float temp : TEMPERATURE;
+    float perp : PERCIPITATION;
 };
 
 float3 get_color_from_elevation(float elevation)
@@ -62,6 +66,18 @@ float3 get_color_from_elevation(float elevation)
     return finalColor;
 }
 
+float3 get_color_from_percipitation(float percipitation)
+{
+    float3 finalColor = (percipitation);
+    return finalColor;
+}
+
+float3 get_color_from_temperature(float temperature)
+{
+    float3 finalColor = (temperature);
+    return finalColor;
+}
+
 VSOutput VSMain(VSInput input)
 {
     VSOutput output;
@@ -72,6 +88,8 @@ VSOutput VSMain(VSInput input)
     output.worldPos = mul(position, world).xyz;
     output.normal = normalize(mul(float4(input.normal, 0.0), normal));
     output.elevation = input.elevation;
+    output.perp = input.perp;
+    output.temp = input.temp;
     return output;
 }
 
@@ -110,8 +128,10 @@ float4 PSMain(VSOutput input) : SV_Target
     float3 diffuse = lightColor.rgb * diff;
     float3 specular = lightColor.rgb * spec * specularIntensity;
     
-    
-    //return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff, 1.0);
-    return float4(objectColor.rgb, 1.0);
+    return float4(get_color_from_temperature(input.temp), 1.0); // Debug temperature
 
+    //return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff, 1.0);
+    //return float4(get_color_from_elevation(input.elevation), 1.0); // Debug biomes
+    //return float4(get_color_from_percipitation(input.perp), 1.0); // Debug percipitiation
+    
 }

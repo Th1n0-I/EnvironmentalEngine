@@ -14,7 +14,7 @@ inline void Check(HRESULT hr)
 }
 
 namespace EnvironmentalEngine {
-	Mesh::Mesh(ID3D11Device* device, const Vertex* vertices, UINT vertexCount, const unsigned int* indices, UINT indexCount) {
+	Mesh::Mesh(ID3D11Device* device, const void* vertices, UINT vertexCount, UINT vertexStride, const UINT* indices, UINT indexCount) {
 
 		D3D11_BUFFER_DESC ibd = {};
 		ibd.ByteWidth = indexCount * sizeof(UINT);
@@ -27,7 +27,7 @@ namespace EnvironmentalEngine {
 		Check(device->CreateBuffer(&ibd, &iinit, &m_indexBuffer));
 
 		D3D11_BUFFER_DESC bd = {};
-		bd.ByteWidth = vertexCount * sizeof(Vertex);
+		bd.ByteWidth = vertexCount * vertexStride;
 		bd.Usage = D3D11_USAGE_DEFAULT;
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
@@ -37,7 +37,7 @@ namespace EnvironmentalEngine {
 		Check(device->CreateBuffer(&bd, &init, &m_vertexBuffer));
 
 		m_indexCount = indexCount;
-		m_vertexStride = sizeof(Vertex);
+		m_vertexStride = vertexStride;
 	}
 
 	void Mesh::Bind(ID3D11DeviceContext* context) const {
