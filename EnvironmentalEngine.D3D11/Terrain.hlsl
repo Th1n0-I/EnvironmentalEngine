@@ -85,7 +85,7 @@ float3 get_color_from_temperature(float temperature)
 float get_percipitation_from_temperature(float percipitation, float temperature)
 {
     float perp = percipitation * 0.5 + 0.5;
-    float ceiling = pow(percipitationThingy, lerp(-15.0, 30.0, temperature)) / pow(percipitationThingy, 30.0);
+    float ceiling = pow(percipitationThingy, lerp(-10.0, 30.0, temperature)) / pow(percipitationThingy, 30.0);
     perp = perp * ceiling;
     return perp;
 }
@@ -97,8 +97,8 @@ float3 get_biome(float percipitation, float temperature)
     
     float2 uv;
     
-    uv.x = newPerp;
-    uv.y = temperature;
+    uv.y = 1 - newPerp;
+    uv.x = temperature;
     
     float3 result = biomeLUT.Sample(biomeSamp, uv);
     return result;

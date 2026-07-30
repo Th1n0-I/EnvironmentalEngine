@@ -68,7 +68,7 @@ namespace EnvironmentalEngine {
 		percipitationN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
 		percipitationN.SetFractalType(FastNoiseLite::FractalType_FBm);
 		percipitationN.SetFractalOctaves(2);
-		percipitationN.SetFrequency(3.0f);
+		percipitationN.SetFrequency(1.0f);
 		percipitationN.SetFractalGain(0.5f);
 
 
@@ -89,8 +89,8 @@ namespace EnvironmentalEngine {
 
 				float h = radius;
 
-				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y), (std::max)( percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z), 0.0f)});
-				else vertices.push_back({ spherePos.x * h * 0.99f, spherePos.y * h * 0.99f, spherePos.z * h * 0.99f, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y), (std::max)(percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z), 0.0f) });
+				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y),  percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z)});
+				else vertices.push_back({ spherePos.x * h * 0.99f, spherePos.y * h * 0.99f, spherePos.z * h * 0.99f, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y), percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z) });
 			}
 		}
 
