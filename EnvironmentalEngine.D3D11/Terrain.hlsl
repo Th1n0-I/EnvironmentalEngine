@@ -26,7 +26,8 @@ cbuffer PerPlanetConstants : register(b1)
     float specularIntensity;
     float smoothness;
     float percipitationThingy;
-    float padding;
+    float elevationStrenght;
+    float ElevationTemperatureScale;
 }
 
 struct VSInput
@@ -82,23 +83,55 @@ float3 get_color_from_temperature(float temperature)
     return finalColor;
 }
 
-float get_percipitation_from_temperature(float percipitation, float temperature)
+float get_temp_from_elevation(float temp, float e)
+{
+     // Remap from 0, 1 to -1, 1 for underwater geometyr wowie I should do that in the generator eh problem for later also wow who new I could comment I never do that I probs should yeah let's start doing that it's probs the reason I'm always lost. Hello!
+    float elevation = e * 2 - 1;
+    
+    // ocean
+    if (elevation <= 0)
+        return -100;
+    
+    // make temperature dependent on height
+    // Convert from 0,1 to C*
+    float temperature = lerp(-10.0, 30.0, temp);
+    
+    // modify the temperature
+    temperature -= elevation * ElevationTemperatureScale;
+    
+    // Covert back to 0,1
+    temperature = (max(temperature, -10.0) + 10.0) / 40.0;
+    
+    return temperature;
+}
+
+float get_percipitation_from_temperature(float percipitation, float temperature, float e)
 {
     float perp = percipitation * 0.5 + 0.5;
-    float ceiling = pow(percipitationThingy, lerp(-10.0, 30.0, temperature)) / pow(percipitationThingy, 30.0);
+    float temp = get_temp_from_elevation(temperature, e);
+    
+    // Ocean
+    if(temp == -100)
+        return -100;
+    
+    float ceiling = pow(percipitationThingy, lerp(-10.0, 30.0, temp)) / pow(percipitationThingy, 30.0);
     perp = perp * ceiling;
     return perp;
 }
 
-float3 get_biome(float percipitation, float temperature)
+float3 get_biome(float percipitation, float temperature, float e)
 {
     
-    float newPerp = get_percipitation_from_temperature(percipitation, temperature);
+    float newPerp = get_percipitation_from_temperature(percipitation, temperature, e);
+    
+    //ocean
+    if (newPerp == -100)
+        return float3(0, 0, 0.5);
     
     float2 uv;
     
     uv.y = 1 - newPerp;
-    uv.x = temperature;
+    uv.x = get_temp_from_elevation(temperature, e);
     
     float3 result = biomeLUT.Sample(biomeSamp, uv);
     return result;
@@ -161,6 +194,6 @@ float4 PSMain(VSOutput input) : SV_Target
     //return float4(get_color_from_percipitation(input.perp), 1.0); // Debug percipitiation
     //return float4(get_color_from_temperature(input.temp), 1.0); // Debug temperature
     //return float4(get_color_from_percipitation(get_percipitation_from_temperature(input.perp, input.temp)), 1.0); // Debug percipitation based on temp
-    return float4(get_biome(input.perp, input.temp), 1.0); // Debug biomes
+    return float4(get_biome(input.perp, input.temp, input.elevation), 1.0); // Debug biomes
 
 }

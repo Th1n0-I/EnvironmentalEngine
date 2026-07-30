@@ -77,7 +77,9 @@ struct PerPlanetConstants {
 	float specularIntensity;
 	float smoothness;
 	float percipitationThingy;
-	float padding;
+	float elevationStrenght;
+	float ElevationTemperatureScale;
+	float padding[3];
 };
 
 struct atmosphereConstants {
@@ -442,8 +444,12 @@ namespace EnvironmentalEngine{
 	void Renderer::DrawPlanet() {
 
 		static float pT = 1.07f;
+		static float elevationStrength = 1.0f;
+		static float elevationTemperatureScale = 6.5f;
 
 		ImGui::DragFloat("Percipitation thingy", &pT, 0.01f);
+		ImGui::DragFloat("Elevation strength ", &elevationStrength, 0.01f);
+		ImGui::DragFloat("Elevation temperature scale ", &elevationTemperatureScale, 0.01f);
 
 		XMMATRIX world =
 			XMMatrixTranslation(m_planet->center.x, m_planet->center.y, m_planet->center.z);
@@ -461,15 +467,19 @@ namespace EnvironmentalEngine{
 		XMStoreFloat(&constants.specularIntensity, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&constants.smoothness, XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f));
 		XMStoreFloat(&constants.percipitationThingy, XMVectorSet(pT, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&constants.elevationStrenght, XMVectorSet(elevationStrength, 0.0f, 0.0f, 0.0f));
+		XMStoreFloat(&constants.ElevationTemperatureScale, XMVectorSet(elevationTemperatureScale, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		m_context->Map(m_perPlanetBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &constants, sizeof(constants));
-		m_context->Unmap(m_perObjectBuffer.Get(), 0);
+		m_context->Unmap(m_perPlanetBuffer.Get(), 0);
 
 		//m_context->RSSetState(m_wireframe.Get());
 		m_context->VSSetShader(m_terrainVS.Get(), nullptr, 0);
+		m_context->VSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
 		m_context->PSSetShader(m_terrainPS.Get(), nullptr, 0);
+		m_context->PSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
 		m_context->IASetInputLayout(m_terrainInputLayout.Get());
 
 		m_context->PSSetShaderResources(0, 1, m_biomeSrv.GetAddressOf());  
@@ -610,6 +620,14 @@ namespace EnvironmentalEngine{
 		pocbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 		
 		Check(m_device->CreateBuffer(&pocbd, nullptr, &m_perObjectBuffer));
+
+		D3D11_BUFFER_DESC ppcbd = {};
+		ppcbd.ByteWidth = sizeof(PerPlanetConstants);
+		ppcbd.Usage = D3D11_USAGE_DYNAMIC;
+		ppcbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		ppcbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+		Check(m_device->CreateBuffer(&ppcbd, nullptr, &m_perPlanetBuffer));
 
 		D3D11_BUFFER_DESC acbd = {};
 		acbd.ByteWidth = sizeof(atmosphereConstants);
