@@ -1,6 +1,9 @@
 Texture2D biomeLUT : register(t0);
 SamplerState biomeSamp : register(s0);
 
+Texture2D<uint> biomeIdLUT : register(t1);
+SamplerState biomeIdSamp : register(s1);
+
 cbuffer PerFrameConstants : register(b0)
 {
     float3 camPos;
@@ -86,7 +89,7 @@ float3 get_color_from_temperature(float temperature)
 float get_temp_from_elevation(float temp, float e)
 {
      // Remap from 0, 1 to -1, 1 for underwater geometyr wowie I should do that in the generator eh problem for later also wow who new I could comment I never do that I probs should yeah let's start doing that it's probs the reason I'm always lost. Hello!
-    float elevation = e * 2 - 1;
+    float elevation = e;
     
     // ocean
     if (elevation <= 0)
@@ -135,6 +138,71 @@ float3 get_biome(float percipitation, float temperature, float e)
     
     float3 result = biomeLUT.Sample(biomeSamp, uv);
     return result;
+}
+
+int get_biome_id(float percipitation, float temperature, float e)
+{
+    float newPerp = get_percipitation_from_temperature(percipitation, temperature, e);
+    
+    //ocean
+    if (newPerp == -100)
+        return -1;
+    
+    float2 uv;
+    uint w, h;
+    biomeIdLUT.GetDimensions(w,h);
+    
+    uv.y = 1 - newPerp;
+    uv.x = get_temp_from_elevation(temperature, e);
+    uv *= float2(w, h);
+    
+    int result = biomeIdLUT.Load(int3((int2) uv, 0)).r;
+    return result;
+}
+
+float3 get_biome_color_from_id(uint id)
+{
+    switch (id)
+    {
+        case -1:
+            return float3(0.251, 0.769, 0.949);
+            break;
+        case 0:
+            return float3(0.678, 0.882, 0.902);
+            break;
+        case 1:
+            return float3(0.722, 0.776, 0.78);
+            break;
+        case 2:
+            return float3(0.235, 0.529, 0.251);
+            break;
+        case 3:
+            return float3(0.227, 0.612, 0.212);
+            break;
+        case 4:
+            return float3(0.161, 0.302, 0.157);
+            break;
+        case 5:
+            return float3(0.439, 0.871, 0.345);
+            break;
+        case 6:
+            return float3(0.922, 0.678, 0.345);
+            break;
+        case 7:
+            return float3(0.929, 0.906, 0.761);
+            break;
+        case 8:
+            return float3(0.365, 0.471, 0.361);
+            break;
+        case 9:
+            return float3(0.859, 0.847, 0.722);
+            break;
+        default: 
+            return float3(1, 1, 1);
+            break;
+
+    }
+
 }
 
 VSOutput VSMain(VSInput input)
@@ -188,12 +256,14 @@ float4 PSMain(VSOutput input) : SV_Target
     float3 specular = lightColor.rgb * spec * specularIntensity;
     
     
-
-    //return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff, 1.0);
+    //objectColor.rgb = get_biome(input.perp, input.temp, input.elevation);
+    objectColor.rgb = get_biome_color_from_id(get_biome_id(input.perp, input.temp, input.elevation));
+    return float4((objectColor.rgb * (ambient + diffuse) + specular) + (objectColor.rgb * pDiffuse + pSpecular) * pIntensity * pFalloff, 1.0);
     //return float4(get_color_from_elevation(input.elevation), 1.0); // Debug biomes
     //return float4(get_color_from_percipitation(input.perp), 1.0); // Debug percipitiation
     //return float4(get_color_from_temperature(input.temp), 1.0); // Debug temperature
     //return float4(get_color_from_percipitation(get_percipitation_from_temperature(input.perp, input.temp)), 1.0); // Debug percipitation based on temp
-    return float4(get_biome(input.perp, input.temp, input.elevation), 1.0); // Debug biomes
+    //return float4(get_biome(input.perp, input.temp, input.elevation), 1.0); // Debug biomes
+    //return float4(get_biome_color_from_id(get_biome_id(input.perp, input.temp, input.elevation)), 1.0); // Biome with id so it doesnt blend and we can identify the biome for things like foliage
 
 }

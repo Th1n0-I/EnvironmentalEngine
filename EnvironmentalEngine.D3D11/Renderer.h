@@ -82,6 +82,9 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_biomeSrv;
 		Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_biomeSampler;
 
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_biomeIdSrv; // I really need to write down how I add things I keep forgetting and have to look it up again.... eh.
+		Microsoft::WRL::ComPtr<ID3D11SamplerState>       m_biomeIdSampler;
+
 		DirectX::XMMATRIX m_viewMatrix;
 		DirectX::XMMATRIX m_projMatrix;
 

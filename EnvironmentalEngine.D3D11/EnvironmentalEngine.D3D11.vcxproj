@@ -127,7 +127,8 @@
 xcopy /Y "$(ProjectDir)Atmosphere.hlsl" "$(OutDir)"
 xcopy /Y "$(ProjectDir)toneMap.hlsl" "$(OutDir)"
 xcopy /Y "$(ProjectDir)Terrain.hlsl" "$(OutDir)"
-xcopy /Y "$(ProjectDir)biomeMap.png" "$(OutDir)"</Command>
+xcopy /Y "$(ProjectDir)biomeMap.png" "$(OutDir)"
+xcopy /Y "$(ProjectDir)biomeIDMap.png" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -231,6 +232,7 @@ xcopy /Y "$(ProjectDir)biomeMap.png" "$(OutDir)"</Command>
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="BiomeIDMap.png" />
     <Image Include="biomeMap.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

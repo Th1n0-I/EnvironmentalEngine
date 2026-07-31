@@ -122,5 +122,8 @@
     <Image Include="biomeMap.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="BiomeIDMap.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

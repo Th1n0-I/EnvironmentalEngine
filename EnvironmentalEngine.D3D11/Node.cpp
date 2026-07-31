@@ -8,6 +8,7 @@
 using namespace DirectX;
 
 namespace EnvironmentalEngine {
+
 	XMVECTOR CubePos(UINT face, DirectX::XMFLOAT2 uv) {
 		static XMFLOAT3 localUp[6] = {
 			{  0.0f,  1.0f,  0.0f },
@@ -83,11 +84,13 @@ namespace EnvironmentalEngine {
 
 				XMFLOAT3 spherePos;
 				XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
-				float base = baseN.GetNoise(spherePos.x, spherePos.y, spherePos.z) * 0.5f + 0.5f;
+				float base = baseN.GetNoise(spherePos.x, spherePos.y, spherePos.z);
+				float mtn = mtnN.GetNoise(spherePos.x, spherePos.y, spherePos.z);
 				
 				float e = base;	
 
-				float h = radius;
+				float h = radius * max((1 + e * 0.01), 1.0f);
+				if (e >= 0.4f) h += radius * max((mtn * 0.5 + 0.5) * 0.1f * (e - 0.4f), 0.0f);
 
 				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y),  percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z)});
 				else vertices.push_back({ spherePos.x * h * 0.99f, spherePos.y * h * 0.99f, spherePos.z * h * 0.99f, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y), percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z) });

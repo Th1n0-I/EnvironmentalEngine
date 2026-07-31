@@ -485,6 +485,9 @@ namespace EnvironmentalEngine{
 		m_context->PSSetShaderResources(0, 1, m_biomeSrv.GetAddressOf());  
 		m_context->PSSetSamplers(0, 1, m_biomeSampler.GetAddressOf());   
 
+		m_context->PSSetShaderResources(1, 1, m_biomeIdSrv.GetAddressOf());
+		m_context->PSSetSamplers(1, 1, m_biomeIdSampler.GetAddressOf());
+
 		for (auto& n : m_planet->roots) {
 			DrawNode(m_context.Get(), *n);
 		}
@@ -757,6 +760,40 @@ namespace EnvironmentalEngine{
 		smp.AddressU = smp.AddressV = smp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		smp.MaxLOD = D3D11_FLOAT32_MAX;
 		Check(m_device->CreateSamplerState(&smp, &m_biomeSampler));
+
+		td = {};
+		sd = {};
+		smp = {};
+
+		texturePath = ExeDir() + L"BiomeIDMap.png";
+		if (_wfopen_s(&textureFile, texturePath.c_str(), L"rb") != 0 || !textureFile)
+		{
+			throw std::runtime_error("biomeIDMap.png not found");
+		}
+		w = 0, h = 0, n = 0;
+		px = stbi_load_from_file(textureFile, &w, &h, &n, 1);
+		fclose(textureFile);
+		if (!px) throw std::runtime_error("biomeIDMap.png failed to decode");
+
+		td.Width = w; td.Height = h;
+		td.MipLevels = 1; td.ArraySize = 1;
+		td.Format = DXGI_FORMAT_R8_UINT;
+		td.SampleDesc.Count = 1;
+		td.Usage = D3D11_USAGE_DEFAULT;
+		td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		sd.pSysMem = px;
+		sd.SysMemPitch = w;
+
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> biomeIdTex = {};
+		Check(m_device->CreateTexture2D(&td, &sd, &biomeIdTex));
+		Check(m_device->CreateShaderResourceView(biomeIdTex.Get(), nullptr, &m_biomeIdSrv));
+		stbi_image_free(px);
+
+		smp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		smp.AddressU = smp.AddressV = smp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		smp.MaxLOD = D3D11_FLOAT32_MAX;
+		Check(m_device->CreateSamplerState(&smp, &m_biomeIdSampler));
     }
 
 
