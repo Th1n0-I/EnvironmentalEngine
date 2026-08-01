@@ -115,7 +115,14 @@ int main()
         }
 
         GameObject& go = *objects[0];
+
+		renderer.BeginShadowPass(camera.position);
+
         renderer.DrawPlanet();
+
+        renderer.EndShadowPass();
+
+		renderer.DrawPlanet();
 
         renderer.DrawAtmosphere(camera.position);
         

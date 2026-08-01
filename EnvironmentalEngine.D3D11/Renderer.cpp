@@ -103,6 +103,10 @@ struct tonemapConstants {
 	XMFLOAT3 padding;
 };
 
+struct shadowConstants {
+	XMFLOAT4X4 transform;
+};
+
 static_assert(sizeof(PerObjectConstants) % 16 == 0, "PerObjectConstants is the wrong size");
 
 std::wstring ExeDir()
@@ -201,7 +205,8 @@ namespace EnvironmentalEngine{
 		vp.Width = static_cast<float>(width);
 		vp.Height = static_cast<float>(height);
 		vp.MaxDepth = 1.0f;
-		m_context->RSSetViewports(1, &vp);
+		m_viewport = vp;
+		m_context->RSSetViewports(1, &m_viewport);
 	}
 
 	Renderer::Renderer(HWND hwnd, int width, int height) 
@@ -244,7 +249,21 @@ namespace EnvironmentalEngine{
 		vp.Width = static_cast<float>(width);
 		vp.Height = static_cast<float>(height);
 		vp.MaxDepth = 1.0f;
-		m_context->RSSetViewports(1, &vp);
+		m_viewport = vp;
+		m_context->RSSetViewports(1, &m_viewport);
+
+		vp.Width = 2048;
+		vp.Height = 2048;
+		vp.MaxDepth = 1.0f;
+		m_shadowViewport = vp;
+
+		D3D11_SAMPLER_DESC sd = {};
+		sd.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+		sd.AddressU = sd.AddressW = sd.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+		sd.BorderColor[0] = sd.BorderColor[1] = sd.BorderColor[2] = sd.BorderColor[3] = 0.0f;
+		sd.ComparisonFunc = D3D11_COMPARISON_GREATER_EQUAL;
+		sd.MaxLOD = D3D11_FLOAT32_MAX;
+		Check(m_device->CreateSamplerState(&sd, &m_shadowSampler));
 
 		D3D11_TEXTURE2D_DESC hdrd = {};
 		hdrd.Width = width;
@@ -291,6 +310,23 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
 		Check(m_device->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
 		Check(m_device->CreateDepthStencilState(&dsd, &m_depthState));
+
+		// Create shadow texture
+		D3D11_TEXTURE2D_DESC std = {};
+		std.Width = 2048;
+		std.Height = 2048;
+		std.MipLevels = 1;
+		std.ArraySize = 1;
+		std.Format = DXGI_FORMAT_R32_TYPELESS;
+		std.SampleDesc.Count = 1;
+		std.Usage = D3D11_USAGE_DEFAULT;
+		std.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+
+		// Since the shadow texture does the same thing as the depth texture, we can reuse the other thingies. Hopefully. I'm not sure.
+		Check(m_device->CreateTexture2D(&std, nullptr, &m_shadowTex));
+		Check(m_device->CreateDepthStencilView(m_shadowTex.Get(), &dsv, &m_shadowView));
+		Check(m_device->CreateShaderResourceView(m_shadowTex.Get(), &srv, &m_shadowSrv));
+		Check(m_device->CreateDepthStencilState(&dsd, &m_shadowState));
         
 		CreateCube();
 	
@@ -476,9 +512,9 @@ namespace EnvironmentalEngine{
 		m_context->Unmap(m_perPlanetBuffer.Get(), 0);
 
 		//m_context->RSSetState(m_wireframe.Get());
-		m_context->VSSetShader(m_terrainVS.Get(), nullptr, 0);
+		if (!m_shadowPass) m_context->VSSetShader(m_terrainVS.Get(), nullptr, 0);
 		m_context->VSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
-		m_context->PSSetShader(m_terrainPS.Get(), nullptr, 0);
+		if (!m_shadowPass) m_context->PSSetShader(m_terrainPS.Get(), nullptr, 0);
 		m_context->PSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
 		m_context->IASetInputLayout(m_terrainInputLayout.Get());
 
@@ -493,6 +529,75 @@ namespace EnvironmentalEngine{
 		}
 
 		//m_context->RSSetState(nullptr);
+	}
+
+	XMMATRIX Renderer::BuildLightMatrix(XMFLOAT3 focus, float extent, float depth) 
+	{
+		XMVECTOR dir = XMVector3Normalize(XMLoadFloat3(&m_lightDir));
+		XMVECTOR target = XMLoadFloat3(&focus);
+		XMVECTOR eye = target - dir * depth * 0.5f;
+
+		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		if(fabsf(XMVectorGetX(XMVector3Dot(dir, up))) > 0.99f) {
+			up = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+		}
+
+		XMMATRIX lightView = XMMatrixLookToLH(eye, dir, up);
+		XMMATRIX lightProj = XMMatrixOrthographicLH(extent, extent, depth, 0.1f);
+		return lightView * lightProj;
+	}
+
+	void Renderer::BeginShadowPass(XMFLOAT3 focus) {
+		m_shadowPass = true;
+
+		XMVECTOR c = XMLoadFloat3(&m_planet->center);
+		XMVECTOR p = XMLoadFloat3(&focus);
+		XMVECTOR surface = c + XMVector3Normalize(p - c) * m_planet->innerRadius;
+		XMStoreFloat3(&focus, surface);
+
+
+		ID3D11ShaderResourceView* nullsrv = nullptr;
+		m_context->PSSetShaderResources(2, 1, &nullsrv);
+
+		XMMATRIX lightMatrix = BuildLightMatrix(focus, 20000.0f, 20000.0f + 2 * m_planet->radius * 0.05f);
+
+		shadowConstants co = {};
+		XMStoreFloat4x4(&co.transform, XMMatrixTranspose(lightMatrix));
+
+		D3D11_MAPPED_SUBRESOURCE mapped = {};
+		m_context->Map(m_shadowBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		memcpy(mapped.pData, &co, sizeof(co));
+		m_context->Unmap(m_shadowBuffer.Get(), 0);
+
+		m_savedProjMatrix = m_projMatrix;
+		m_savedViewMatrix = m_viewMatrix;
+		m_projMatrix = XMMatrixIdentity();
+		m_viewMatrix = lightMatrix;
+
+		m_context->RSSetViewports(1, &m_shadowViewport);
+		m_context->OMSetRenderTargets(0, nullptr, m_shadowView.Get());
+		m_context->ClearDepthStencilView(m_shadowView.Get(), D3D11_CLEAR_DEPTH, 0.0f, 0);
+		m_context->OMSetDepthStencilState(m_shadowState.Get(), 0);
+
+		m_context->VSSetShader(m_shadowVS.Get(), nullptr, 0);
+		m_context->PSSetShader(nullptr, nullptr, 0);
+		m_context->IASetInputLayout(m_inputLayout.Get());
+
+	}
+
+	void Renderer::EndShadowPass() {
+		m_shadowPass = false;
+		m_viewMatrix = m_savedViewMatrix;
+		m_projMatrix = m_savedProjMatrix;
+
+		m_context->RSSetViewports(1, &m_viewport);
+		m_context->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), m_depthView.Get());
+		m_context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
+		m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+
+		m_context->PSSetConstantBuffers(2, 1, m_shadowBuffer.GetAddressOf());
+		m_context->PSSetShaderResources(2, 1, m_shadowSrv.GetAddressOf());
+		m_context->PSSetSamplers(2, 1, m_shadowSampler.GetAddressOf());	
 	}
 
 	void Renderer::EndFrame() 
@@ -608,37 +713,29 @@ namespace EnvironmentalEngine{
 
 		m_sphereMesh = std::make_unique<Mesh>(m_device.Get(), sVertices.data(), (UINT)sVertices.size(), sizeof(Vertex), sIndices.data(), (UINT)sIndices.size());
 
-		D3D11_BUFFER_DESC pfcbd = {};
-		pfcbd.ByteWidth = sizeof(PerFrameConstants);
-		pfcbd.Usage = D3D11_USAGE_DYNAMIC;
-		pfcbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		pfcbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		D3D11_BUFFER_DESC cbd = {};
+		cbd.ByteWidth = sizeof(PerFrameConstants);
+		cbd.Usage = D3D11_USAGE_DYNAMIC;
+		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-		Check(m_device->CreateBuffer(&pfcbd, nullptr, &m_perFrameBuffer));
+		Check(m_device->CreateBuffer(&cbd, nullptr, &m_perFrameBuffer));
 
-		D3D11_BUFFER_DESC pocbd = {};
-		pocbd.ByteWidth = sizeof(PerObjectConstants);
-		pocbd.Usage = D3D11_USAGE_DYNAMIC;
-		pocbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		pocbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		cbd.ByteWidth = sizeof(PerObjectConstants);
 		
-		Check(m_device->CreateBuffer(&pocbd, nullptr, &m_perObjectBuffer));
+		Check(m_device->CreateBuffer(&cbd, nullptr, &m_perObjectBuffer));
 
-		D3D11_BUFFER_DESC ppcbd = {};
-		ppcbd.ByteWidth = sizeof(PerPlanetConstants);
-		ppcbd.Usage = D3D11_USAGE_DYNAMIC;
-		ppcbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		ppcbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		cbd.ByteWidth = sizeof(PerPlanetConstants);
 
-		Check(m_device->CreateBuffer(&ppcbd, nullptr, &m_perPlanetBuffer));
+		Check(m_device->CreateBuffer(&cbd, nullptr, &m_perPlanetBuffer));
 
-		D3D11_BUFFER_DESC acbd = {};
-		acbd.ByteWidth = sizeof(atmosphereConstants);
-		acbd.Usage = D3D11_USAGE_DYNAMIC;
-		acbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		acbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		cbd.ByteWidth = sizeof(atmosphereConstants);
 
-		Check(m_device->CreateBuffer(&acbd, nullptr, &m_atmosphereBuffer));
+		Check(m_device->CreateBuffer(&cbd, nullptr, &m_atmosphereBuffer));
+
+		cbd.ByteWidth = sizeof(shadowConstants);
+
+		Check(m_device->CreateBuffer(&cbd, nullptr, &m_shadowBuffer));
 
 		std::wstring shaderPath = ExeDir() + L"Triangle.hlsl";
 
@@ -711,6 +808,14 @@ namespace EnvironmentalEngine{
 		Check(m_device->CreatePixelShader(
 			tps->GetBufferPointer(), tps->GetBufferSize(),
 			nullptr, &m_terrainPS
+		));
+
+		std::wstring shadowPath = ExeDir() + L"Shadow.hlsl";
+		auto svs = LoadShaderByteCode(shadowPath.c_str(), "VSMain", "vs_5_0");
+
+		Check(m_device->CreateVertexShader(
+			svs->GetBufferPointer(), svs->GetBufferSize(),
+			nullptr, &m_shadowVS
 		));
 
 		D3D11_INPUT_ELEMENT_DESC terrainLayout[] = {

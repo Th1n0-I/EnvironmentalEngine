@@ -33,6 +33,25 @@ cbuffer PerPlanetConstants : register(b1)
     float ElevationTemperatureScale;
 }
 
+cbuffer ShadowConstants : register(b2)
+{
+    float4x4 lightViewProj;
+}
+
+Texture2D<float> shadowMap : register(t2);
+SamplerComparisonState shadowSampler : register(s2);
+
+float sampleShadowMap(float3 worldPos)
+{
+    float4 lightClip = mul(float4(worldPos, 1.0), lightViewProj);
+    float2 uv = lightClip.xy * float2(0.5, -0.5) + 0.5f;
+    
+    if(any(uv < 0.0f) || any(uv > 1.0f) || lightClip.z < 0.0f)
+        return 1.0f;
+    
+    return shadowMap.SampleCmpLevelZero(shadowSampler, uv, lightClip.z + 0.005);
+}
+
 struct VSInput
 {
     float3 position : POSITION;
@@ -250,10 +269,10 @@ float4 PSMain(VSOutput input) : SV_Target
     float3 pSpecular = pColor.rgb * pSpec * specularIntensity;
     float pFalloff = min(1.0 / pow(distance(input.worldPos, pLightPosition), 2), 1.0);
     
-    
+    float shadow = sampleShadowMap(input.worldPos);
     float3 ambient = float3(ambientColor.rgb * ambientIntensity);
-    float3 diffuse = lightColor.rgb * diff;
-    float3 specular = lightColor.rgb * spec * specularIntensity;
+    float3 diffuse = lightColor.rgb * diff * shadow;
+    float3 specular = lightColor.rgb * spec * specularIntensity * shadow;
     
     
     //objectColor.rgb = get_biome(input.perp, input.temp, input.elevation);
@@ -265,5 +284,6 @@ float4 PSMain(VSOutput input) : SV_Target
     //return float4(get_color_from_percipitation(get_percipitation_from_temperature(input.perp, input.temp)), 1.0); // Debug percipitation based on temp
     //return float4(get_biome(input.perp, input.temp, input.elevation), 1.0); // Debug biomes
     //return float4(get_biome_color_from_id(get_biome_id(input.perp, input.temp, input.elevation)), 1.0); // Biome with id so it doesnt blend and we can identify the biome for things like foliage
+    //return (N * 0.5 + 0.5, 1.0); // Debug normals
 
 }

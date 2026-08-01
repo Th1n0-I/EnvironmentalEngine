@@ -7,8 +7,6 @@
 
 using namespace DirectX;
 
-
-
 namespace EnvironmentalEngine {
 
 	XMVECTOR CubePos(UINT face, DirectX::XMFLOAT2 uv) {
@@ -66,7 +64,7 @@ namespace EnvironmentalEngine {
 		baseN.SetFractalOctaves(4);
 		baseN.SetFrequency(1.0f);
 		baseN.SetFractalGain(0.5f);
-		
+
 		FastNoiseLite percipitationN;
 		percipitationN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
 		percipitationN.SetFractalType(FastNoiseLite::FractalType_FBm);

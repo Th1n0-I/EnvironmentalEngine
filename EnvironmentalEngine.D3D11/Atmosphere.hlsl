@@ -16,6 +16,26 @@ cbuffer AtmosphereConstants : register(b0)
     float padding0;
 };
 
+cbuffer ShadowConstants : register(b2)
+{
+
+float4x4 lightViewProj;
+}
+
+Texture2D<float> shadowMap : register(t2);
+SamplerComparisonState shadowSampler : register(s2);
+
+float sampleShadowMap(float3 worldPos)
+{
+    float4 lightClip = mul(float4(worldPos, 1.0), lightViewProj);
+    float2 uv = lightClip.xy * float2(0.5, -0.5) + 0.5f;
+    
+    if (any(uv < 0.0f) || any(uv > 1.0f) || lightClip.z < 0.0f)
+        return 1.0f;
+    
+    return shadowMap.SampleCmpLevelZero(shadowSampler, uv, lightClip.z + 0.005);
+}
+
 Texture2D depthTex : register(t0);
 
 struct VSOutput
@@ -85,6 +105,7 @@ float4 PSMain(VSOutput input) : SV_Target
     float stepSize = (tFar - tNear) / STEPS;
     float viewODr = 0.0, viewODm = 0.0;
     float3 sumR = 0.0, sumM = 0.0, sumMulti = 0.0;
+    float3 L = normalize(dirToSun);
     
     for (int i = 0; i < STEPS; i++)
     {
@@ -96,12 +117,12 @@ float4 PSMain(VSOutput input) : SV_Target
         viewODr += dr;
         viewODm += dm;
         
-        float lightFar = raySphere(planetCenter, outerRadius, p, normalize(dirToSun)).y;
+        float lightFar = raySphere(planetCenter, outerRadius, p, L).y;
         float lStep = lightFar / LIGHT_STEPS;
         float sunODr = 0.0, sunODm = 0.0;
         for (int j = 0; j < LIGHT_STEPS; j++)
         {
-            float3 lp = p + normalize(dirToSun) * ((j + 0.5) * lStep);
+            float3 lp = p + L * ((j + 0.5) * lStep);
             float lh = length(lp - planetCenter) - innerRadius;
             sunODr += exp(-lh / scaleHeight) * lStep;
             sunODm += exp(-lh / mieScaleHeight) * lStep;
@@ -112,12 +133,13 @@ float4 PSMain(VSOutput input) : SV_Target
         float3 transmittance = exp(-tau);
         float3 transMulti = exp(-tau * 0.25);
         
-        sumR += dr * transmittance;
-        sumM += dm * transmittance;
+        float vis = sampleShadowMap(p);
+        sumR += dr * transmittance * vis;
+        sumM += dm * transmittance * vis;
         sumMulti += dr * transMulti;
     }
     
-    float cosT = dot(rayDir, normalize(dirToSun));
+    float cosT = dot(rayDir, L);
     float phaseR = 3.0 / (16.0 * PI) * (1.0 + cosT * cosT);
     float phaseM = miePhase(cosT);
     

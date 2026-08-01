@@ -117,6 +117,7 @@
     <None Include="Atmosphere.hlsl" />
     <None Include="toneMap.hlsl" />
     <None Include="Terrain.hlsl" />
+    <None Include="Shadow.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="biomeMap.png">

@@ -34,6 +34,10 @@ namespace EnvironmentalEngine {
 		Mesh* CubeMesh() const { return m_cubeMesh.get(); }
 		Mesh* SphereMesh() const { return m_sphereMesh.get(); }
 
+		DirectX::XMMATRIX BuildLightMatrix(DirectX::XMFLOAT3 focus, float extent, float depth);
+
+		void BeginShadowPass(DirectX::XMFLOAT3 focus);
+		void EndShadowPass();
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D11Device> m_device;
@@ -47,6 +51,11 @@ namespace EnvironmentalEngine {
 		std::unique_ptr<Mesh> m_cubeMesh;
 		std::unique_ptr<Mesh> m_sphereMesh;
 		std::vector<std::unique_ptr<Mesh>> m_chunks;
+
+		D3D11_VIEWPORT m_viewport;
+
+		D3D11_VIEWPORT m_shadowViewport;
+		Microsoft::WRL::ComPtr<ID3D11SamplerState> m_shadowSampler;
 	    
 	    Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
 	    Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
@@ -57,11 +66,17 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_atmosphereBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_tonemapBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_perPlanetBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer> m_shadowBuffer;
 
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthTex;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthView;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_depthSrv;
 		Microsoft::WRL::ComPtr<ID3D11DepthStencilState>  m_depthState;
+
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_shadowTex;
+		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_shadowView;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_shadowSrv;
+		Microsoft::WRL::ComPtr<ID3D11DepthStencilState>  m_shadowState;
 
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_hdrTex;
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_hdrRtv;
@@ -77,6 +92,8 @@ namespace EnvironmentalEngine {
 		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_terrainPS;
 		Microsoft::WRL::ComPtr<ID3D11InputLayout> m_terrainInputLayout;
 
+		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_shadowVS;
+
 		Microsoft::WRL::ComPtr<ID3D11BlendState> m_additiveBlend;
 
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_biomeSrv;
@@ -88,11 +105,16 @@ namespace EnvironmentalEngine {
 		DirectX::XMMATRIX m_viewMatrix;
 		DirectX::XMMATRIX m_projMatrix;
 
+		DirectX::XMMATRIX m_savedViewMatrix;
+		DirectX::XMMATRIX m_savedProjMatrix;
+
 		DirectX::XMFLOAT3 m_lightDir;
 
 		std::unique_ptr<PlanetRenderer> m_planet;
 
 		float m_fov = 60.0f;
+
+		bool m_shadowPass = false;
 	};
 
 	
