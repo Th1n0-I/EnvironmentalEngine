@@ -49,6 +49,8 @@ namespace EnvironmentalEngine {
 		return (X == 0 || X == R - 1 || Y == 0 || Y == R - 1);
 	}
 
+	
+
 	ChunkData GenerateChunk(UINT face, XMFLOAT2 uvMin, XMFLOAT2 uvMax, float radius) {
 
 		int res = 16;
@@ -74,6 +76,22 @@ namespace EnvironmentalEngine {
 		percipitationN.SetFrequency(1.0f);
 		percipitationN.SetFractalGain(0.5f);
 
+		auto heightAt = [&](const XMVECTOR& sp) -> float {
+			XMFLOAT3 spf; XMStoreFloat3(&spf, sp);
+			float e = baseN.GetNoise(spf.x, spf.y, spf.z);
+			float mtn = mtnN.GetNoise(spf.x, spf.y, spf.z);
+			float hh = max(1.0f + e * 0.01f, 1.0f);
+			if (e >= 0.4f) hh += max((mtn * 0.5f + 0.5f) * 0.1f * (e - 0.4f), 0.0f);
+			return hh;
+		};
+
+		auto surfacePos = [&](const XMFLOAT2& uv) -> XMVECTOR {
+			XMVECTOR cubePos = CubePos(face, uv);
+			XMVECTOR spherePos = XMVector3Normalize(cubePos);
+			float height = heightAt(spherePos);
+			return spherePos * height;
+			};
+
 
 		std::vector<TerrainVertex> vertices;
 		std::vector<UINT> indices;
@@ -82,21 +100,24 @@ namespace EnvironmentalEngine {
 			for (int y = -1; y < res + 1; y++) {
 				XMFLOAT2 percent = { clamp(x / (res - 1.0f), 0.0f, 1.0f), clamp(y / (res - 1.0f), 0.0f, 1.0f) };
 				XMFLOAT2 uv = { lerp(uvMin.x, uvMax.x, percent.x), lerp(uvMin.y, uvMax.y, percent.y) };
-				XMVECTOR cubePos = CubePos(face, uv);
+				float d = (uvMax.x - uvMin.x) / (res - 1.0f) * 0.5f;
 
-				XMFLOAT3 spherePos;
-				XMStoreFloat3(&spherePos, XMVector3Normalize(cubePos));
-				float base = baseN.GetNoise(spherePos.x, spherePos.y, spherePos.z);
-				float mtn = mtnN.GetNoise(spherePos.x, spherePos.y, spherePos.z);
-				
-				float e = base;	
-				e = 0.0f;
+				XMVECTOR unitSpherePos = XMVector3Normalize(CubePos(face, uv));
+				XMFLOAT3 u; XMStoreFloat3(&u, unitSpherePos);
+				float e = baseN.GetNoise(u.x, u.y, u.z);
 
-				float h = radius * max((1 + e * 0.01), 1.0f);
-				if (e >= 0.4f) h += radius * max((mtn * 0.5 + 0.5) * 0.1f * (e - 0.4f), 0.0f);
+				XMVECTOR sp = surfacePos(uv);
+				XMFLOAT3 spherePos; XMStoreFloat3(&spherePos, sp);
 
-				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * h, spherePos.y * h, spherePos.z * h, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y),  percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z)});
-				else vertices.push_back({ spherePos.x * h * 0.99f, spherePos.y * h * 0.99f, spherePos.z * h * 0.99f, 0.0f, 0.0f, 0.0f, e, 1 - (std::fabsf)(spherePos.y), percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z) });
+
+				XMVECTOR du = surfacePos({ uv.x + d, uv.y }) - surfacePos({uv.x - d, uv.y});
+				XMVECTOR dv = surfacePos({ uv.x, uv.y + d }) - surfacePos({ uv.x, uv.y - d });
+				XMVECTOR n = XMVector3Normalize(XMVector3Cross(du, dv));
+
+				XMFLOAT3 normal; XMStoreFloat3(&normal, n);
+
+				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * radius, spherePos.y * radius, spherePos.z * radius, normal.x, normal.y, normal.z, e, 1 - (std::fabsf)(spherePos.y),  percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z)});
+				else vertices.push_back({ spherePos.x * radius * 0.99f, spherePos.y * radius * 0.99f, spherePos.z * radius * 0.99f, normal.x, normal.y, normal.z, e, 1 - (std::fabsf)(spherePos.y), percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z) });
 			}
 		}
 
@@ -113,41 +134,13 @@ namespace EnvironmentalEngine {
 			}
 		}
 
-		for (size_t t = 0; t < indices.size(); t += 3) {
-
-			UINT ia = indices[t], ib = indices[t + 1], ic = indices[t + 2];
-
-			if (isSkirt(res, ia) || isSkirt(res, ib) || isSkirt(res, ic)) continue;
-
-			XMVECTOR a = XMVectorSet(vertices[ia].x, vertices[ia].y, vertices[ia].z, 0.0f);
-			XMVECTOR b = XMVectorSet(vertices[ib].x, vertices[ib].y, vertices[ib].z, 0.0f);
-			XMVECTOR c = XMVectorSet(vertices[ic].x, vertices[ic].y, vertices[ic].z, 0.0f);
-
-			
-			XMVECTOR faceN = XMVector3Cross(b - a, c - a);
-			XMFLOAT3 fn; XMStoreFloat3(&fn, faceN);
-
-			vertices[ia].nx += fn.x; vertices[ia].ny += fn.y; vertices[ia].nz += fn.z;
-			vertices[ib].nx += fn.x; vertices[ib].ny += fn.y; vertices[ib].nz += fn.z;
-			vertices[ic].nx += fn.x; vertices[ic].ny += fn.y; vertices[ic].nz += fn.z;
-		}
-
-		for (auto& v : vertices) {
-			float len = sqrtf(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz);
-			if (len > 1e-6f) {
-				v.nx /= len; v.ny /= len; v.nz /= len;
-			}
-			else {
-				float p = sqrtf(v.nx * v.nx + v.ny * v.ny + v.nz * v.nz);
-				v.nx = v.x / p; v.ny = v.y / p; v.nz = v.z / p;
-			}
-		}
-
 		ChunkData chunkData = { vertices, indices };
 
 		return chunkData;
 
 	}
+
+	
 
 	void UpdateLOD(ID3D11Device* device  ,node& n, XMFLOAT3 camPos, XMFLOAT3 center, float radius, ThreadPool& pool) {
 		
