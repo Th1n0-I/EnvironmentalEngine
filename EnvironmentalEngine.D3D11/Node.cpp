@@ -56,21 +56,21 @@ namespace EnvironmentalEngine {
 		int res = 16;
 
 		FastNoiseLite mtnN;
-		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		mtnN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
 		mtnN.SetFractalType(FastNoiseLite::FractalType_Ridged);
 		mtnN.SetFractalOctaves(5);
 		mtnN.SetFrequency(1.8f);
 		mtnN.SetFractalGain(0.5f);
 
 		FastNoiseLite baseN;
-		baseN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		baseN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
 		baseN.SetFractalType(FastNoiseLite::FractalType_FBm);
 		baseN.SetFractalOctaves(4);
 		baseN.SetFrequency(1.0f);
 		baseN.SetFractalGain(0.5f);
 		
 		FastNoiseLite percipitationN;
-		percipitationN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+		percipitationN.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
 		percipitationN.SetFractalType(FastNoiseLite::FractalType_FBm);
 		percipitationN.SetFractalOctaves(2);
 		percipitationN.SetFrequency(1.0f);
@@ -100,7 +100,7 @@ namespace EnvironmentalEngine {
 			for (int y = -1; y < res + 1; y++) {
 				XMFLOAT2 percent = { clamp(x / (res - 1.0f), 0.0f, 1.0f), clamp(y / (res - 1.0f), 0.0f, 1.0f) };
 				XMFLOAT2 uv = { lerp(uvMin.x, uvMax.x, percent.x), lerp(uvMin.y, uvMax.y, percent.y) };
-				float d = (uvMax.x - uvMin.x) / (res - 1.0f) * 0.5f;
+				float d = 0.003f;
 
 				XMVECTOR unitSpherePos = XMVector3Normalize(CubePos(face, uv));
 				XMFLOAT3 u; XMStoreFloat3(&u, unitSpherePos);
