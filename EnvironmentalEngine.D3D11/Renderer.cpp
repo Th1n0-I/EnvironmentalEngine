@@ -26,6 +26,8 @@
 
 const static float PI = 3.14159265358987;
 
+static constexpr UINT SHADOW_RES = 2048;
+
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
@@ -252,8 +254,8 @@ namespace EnvironmentalEngine{
 		m_viewport = vp;
 		m_context->RSSetViewports(1, &m_viewport);
 
-		vp.Width = 2048;
-		vp.Height = 2048;
+		vp.Width = SHADOW_RES;
+		vp.Height = SHADOW_RES;
 		vp.MaxDepth = 1.0f;
 		m_shadowViewport = vp;
 
@@ -313,8 +315,8 @@ namespace EnvironmentalEngine{
 
 		// Create shadow texture
 		D3D11_TEXTURE2D_DESC std = {};
-		std.Width = 2048;
-		std.Height = 2048;
+		std.Width = SHADOW_RES;
+		std.Height = SHADOW_RES;
 		std.MipLevels = 1;
 		std.ArraySize = 1;
 		std.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -402,10 +404,7 @@ namespace EnvironmentalEngine{
 			1.0f);
 
 		
-		D3D11_RASTERIZER_DESC rd = {};
-		rd.FillMode = D3D11_FILL_WIREFRAME;
-		rd.CullMode = D3D11_CULL_NONE;
-		m_device->CreateRasterizerState(&rd, &m_wireframe);
+		
 		
 
 		PerFrameConstants frameConstants = {};
@@ -899,6 +898,11 @@ namespace EnvironmentalEngine{
 		smp.AddressU = smp.AddressV = smp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		smp.MaxLOD = D3D11_FLOAT32_MAX;
 		Check(m_device->CreateSamplerState(&smp, &m_biomeIdSampler));
+
+		D3D11_RASTERIZER_DESC rd = {};
+		rd.FillMode = D3D11_FILL_WIREFRAME;
+		rd.CullMode = D3D11_CULL_NONE;
+		m_device->CreateRasterizerState(&rd, &m_wireframe);
     }
 
 
@@ -944,6 +948,7 @@ namespace EnvironmentalEngine{
 
 		m_context->VSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
 		m_context->PSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
+		m_context->PSSetConstantBuffers(2, 1, m_shadowBuffer.GetAddressOf());
 
 
 		m_context->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), nullptr);
@@ -955,6 +960,8 @@ namespace EnvironmentalEngine{
 		m_context->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		m_context->PSSetShaderResources(0, 1, m_depthSrv.GetAddressOf());
+		m_context->PSSetShaderResources(2, 1, m_shadowSrv.GetAddressOf());
+		m_context->PSSetSamplers(2, 1, m_shadowSampler.GetAddressOf());
 
 		float bf[4] = { 0, 0, 0, 0 };
 		m_context->OMSetBlendState(m_additiveBlend.Get(), bf, 0xffffffff);

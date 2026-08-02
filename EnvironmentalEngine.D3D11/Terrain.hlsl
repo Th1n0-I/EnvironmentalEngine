@@ -46,7 +46,7 @@ float sampleShadowMap(float3 worldPos)
     float4 lightClip = mul(float4(worldPos, 1.0), lightViewProj);
     float2 uv = lightClip.xy * float2(0.5, -0.5) + 0.5f;
     
-    if(any(uv < 0.0f) || any(uv > 1.0f) || lightClip.z < 0.0f)
+    if (any(uv < 0.0f) || any(uv > 1.0f) || lightClip.z < 0.0f || lightClip.z > 1.0f)
         return 1.0f;
     
     return shadowMap.SampleCmpLevelZero(shadowSampler, uv, lightClip.z + 0.005);
