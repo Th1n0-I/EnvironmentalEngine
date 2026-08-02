@@ -90,18 +90,28 @@ float4 PSMain(VSOutput input) : SV_Target
     
     float3 rayDir = normalize(worldPos - campos); 
     
-    float2 hit = raySphere(planetCenter, outerRadius, campos, rayDir);
-    hit.x = max(hit.x, 0.0);
+    float2 outerHit = raySphere(planetCenter, outerRadius, campos, rayDir);
+    float2 innerHit = raySphere(planetCenter, innerRadius, campos, rayDir);
+    outerHit.x = max(outerHit.x, 0.0);
     
-    if (hit.y < 0.0)
+    if (outerHit.y < 0.0)
         return float4(0, 0, 0, 0);
     
-    float tNear = max(hit.x, 0.0f);
-    float tFar = min(hit.y, sceneDist);
+    float tNear = max(outerHit.x, 0.0f);
+    float tFar = min(outerHit.y, sceneDist);
     if (tFar <= tNear)
         return float4(0, 0, 0, 0);
     
-    const int STEPS = 16, LIGHT_STEPS = 16;
+    float camAlt = length(campos - planetCenter) - innerRadius;
+    float atmoThickness = outerRadius - innerRadius;
+    
+    float w = smoothstep(atmoThickness * 0.25, atmoThickness * 2.0, camAlt);
+    
+    float surface = (innerHit.x > 0.0) ? innerHit.x : sceneDist;
+    
+    tFar = min(outerHit.y, lerp(sceneDist, surface, w));
+    
+    const int STEPS = 64, LIGHT_STEPS = 16;
     float stepSize = (tFar - tNear) / STEPS;
     float viewODr = 0.0, viewODm = 0.0;
     float3 sumR = 0.0, sumM = 0.0, sumMulti = 0.0;

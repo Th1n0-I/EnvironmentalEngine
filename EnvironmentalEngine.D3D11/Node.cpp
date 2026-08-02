@@ -116,8 +116,8 @@ namespace EnvironmentalEngine {
 
 				XMFLOAT3 normal; XMStoreFloat3(&normal, n);
 
-				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * radius, spherePos.y * radius, spherePos.z * radius, normal.x, normal.y, normal.z, e, 1 - (std::fabsf)(spherePos.y),  percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z)});
-				else vertices.push_back({ spherePos.x * radius * 0.99f, spherePos.y * radius * 0.99f, spherePos.z * radius * 0.99f, normal.x, normal.y, normal.z, e, 1 - (std::fabsf)(spherePos.y), percipitationN.GetNoise(spherePos.x, spherePos.y, spherePos.z) });
+				if (x >= 0 && x < res && y >= 0 && y < res) vertices.push_back({ spherePos.x * radius, spherePos.y * radius, spherePos.z * radius, normal.x, normal.y, normal.z, e, 1 - (std::fabsf)(u.y),  percipitationN.GetNoise(u.x, u.y, u.z)});
+				else vertices.push_back({ spherePos.x * radius * 0.99f, spherePos.y * radius * 0.99f, spherePos.z * radius * 0.99f, normal.x, normal.y, normal.z, e, 1 - (std::fabsf)(u.y), percipitationN.GetNoise(u.x, u.y, u.z) });
 			}
 		}
 
