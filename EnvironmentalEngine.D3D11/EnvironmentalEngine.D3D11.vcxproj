@@ -153,6 +153,7 @@ xcopy /Y "$(ProjectDir)Shadow.hlsl" "$(OutDir)"</Command>
   <ItemGroup>
     <ClInclude Include="FastNoiseLite.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="GraphicsDevice.h" />
     <ClInclude Include="imgui\imconfig.h" />
     <ClInclude Include="imgui\imgui.h" />
     <ClInclude Include="imgui\imgui_impl_dx11.h" />
@@ -173,6 +174,7 @@ xcopy /Y "$(ProjectDir)Shadow.hlsl" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EnvironmentalEngine.D3D11.cpp" />
+    <ClCompile Include="GraphicsDevice.cpp" />
     <ClCompile Include="imgui\imgui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>

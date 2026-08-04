@@ -10,6 +10,7 @@
 #include "MeshRenderer.h"
 #include "GameObject.h"
 #include "PlanetRenderer.h"
+#include "GraphicsDevice.h"
 #include <memory>
 
 namespace EnvironmentalEngine {
@@ -40,10 +41,9 @@ namespace EnvironmentalEngine {
 		void EndShadowPass();
 
 	private:
-		Microsoft::WRL::ComPtr<ID3D11Device> m_device;
-		Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_context;
-		Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
-		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rtv;
+
+		GraphicsDevice graphicsDevice;
+
 		Microsoft::WRL::ComPtr<ID3D11RasterizerState>  m_wireframe;
 	    
 	    void CreateCube();
@@ -51,8 +51,6 @@ namespace EnvironmentalEngine {
 		std::unique_ptr<Mesh> m_cubeMesh;
 		std::unique_ptr<Mesh> m_sphereMesh;
 		std::vector<std::unique_ptr<Mesh>> m_chunks;
-
-		D3D11_VIEWPORT m_viewport;
 
 		D3D11_VIEWPORT m_shadowViewport;
 		Microsoft::WRL::ComPtr<ID3D11SamplerState> m_shadowSampler;

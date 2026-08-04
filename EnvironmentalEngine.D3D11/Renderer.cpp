@@ -31,18 +31,6 @@ static constexpr UINT SHADOW_RES = 2048;
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 
-int old_width = 0;
-int old_height = 0;
-float aspect_ratio = 0.0f;
-
-inline void Check(HRESULT hr) 
-{
-	if (FAILED(hr)) 
-	    {
-		throw std::runtime_error("D3D11 Call failed!");
-	}
-}
-
 struct PerFrameConstants {
 	
 	XMFLOAT3 camPos;
@@ -151,17 +139,11 @@ namespace EnvironmentalEngine{
 	void Renderer::Resize(int width, int height)
 	{
 		if (width == 0 || height == 0) return;
-		aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
-		m_rtv.Reset();
+
+		graphicsDevice.Resize(width, height);
 
 		m_depthView.Reset();
 		m_depthTex.Reset();
-
-		Check(m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0));
-
-		ComPtr<ID3D11Texture2D> backBuffer;
-		Check(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
-		Check(m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_rtv));
 
 		D3D11_TEXTURE2D_DESC hdrd = {};
 		hdrd.Width = width;
@@ -173,9 +155,9 @@ namespace EnvironmentalEngine{
 		hdrd.Usage = D3D11_USAGE_DEFAULT;
 		hdrd.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-		Check(m_device->CreateTexture2D(&hdrd, nullptr, &m_hdrTex));
-		Check(m_device->CreateShaderResourceView(m_hdrTex.Get(), nullptr, &m_hdrSrv));
-		Check(m_device->CreateRenderTargetView(m_hdrTex.Get(), nullptr, &m_hdrRtv));
+		Check(graphicsDevice.Device()->CreateTexture2D(&hdrd, nullptr, &m_hdrTex));
+		Check(graphicsDevice.Device()->CreateShaderResourceView(m_hdrTex.Get(), nullptr, &m_hdrSrv));
+		Check(graphicsDevice.Device()->CreateRenderTargetView(m_hdrTex.Get(), nullptr, &m_hdrRtv));
 
 		D3D11_TEXTURE2D_DESC dd = {};
 		dd.Width = width;
@@ -199,61 +181,15 @@ namespace EnvironmentalEngine{
 		srv.Texture2D.MostDetailedMip = 0;
 		srv.Texture2D.MipLevels = 1;
 
-		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
-		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
-		Check(m_device->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
-
-		D3D11_VIEWPORT vp = {};
-		vp.Width = static_cast<float>(width);
-		vp.Height = static_cast<float>(height);
-		vp.MaxDepth = 1.0f;
-		m_viewport = vp;
-		m_context->RSSetViewports(1, &m_viewport);
+		Check(graphicsDevice.Device()->CreateTexture2D(&dd, nullptr, &m_depthTex));
+		Check(graphicsDevice.Device()->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
+		Check(graphicsDevice.Device()->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
 	}
 
-	Renderer::Renderer(HWND hwnd, int width, int height) 
+	Renderer::Renderer(HWND hwnd, int width, int height) : graphicsDevice(hwnd, width, height)
     {
-		DXGI_SWAP_CHAIN_DESC desc = {};
-		desc.BufferDesc.Width = width;
-		desc.BufferDesc.Height = height;
-		desc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-		desc.SampleDesc.Count = 1;
-		desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		desc.BufferCount = 2;
-		desc.OutputWindow = hwnd;
-		desc.Windowed = true;
-		desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-		UINT flags = 0;
-		#ifdef _DEBUG
-			flags |= D3D11_CREATE_DEVICE_DEBUG;
-		#endif
-
-		Check(D3D11CreateDeviceAndSwapChain(
-			nullptr,
-			D3D_DRIVER_TYPE_HARDWARE,
-			nullptr,
-			flags,
-			nullptr, 0,
-			D3D11_SDK_VERSION,
-			&desc,
-			&m_swapChain,
-			&m_device,
-			nullptr,
-			&m_context
-		));
-
-		ComPtr<ID3D11Texture2D> backBuffer;
-		Check(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)));
-		Check(m_device->CreateRenderTargetView(backBuffer.Get(), nullptr, &m_rtv));
-
+		
 		D3D11_VIEWPORT vp = {};
-		vp.Width = static_cast<float>(width);
-		vp.Height = static_cast<float>(height);
-		vp.MaxDepth = 1.0f;
-		m_viewport = vp;
-		m_context->RSSetViewports(1, &m_viewport);
-
 		vp.Width = SHADOW_RES;
 		vp.Height = SHADOW_RES;
 		vp.MaxDepth = 1.0f;
@@ -265,7 +201,7 @@ namespace EnvironmentalEngine{
 		sd.BorderColor[0] = sd.BorderColor[1] = sd.BorderColor[2] = sd.BorderColor[3] = 0.0f;
 		sd.ComparisonFunc = D3D11_COMPARISON_GREATER_EQUAL;
 		sd.MaxLOD = D3D11_FLOAT32_MAX;
-		Check(m_device->CreateSamplerState(&sd, &m_shadowSampler));
+		Check(graphicsDevice.Device()->CreateSamplerState(&sd, &m_shadowSampler));
 
 		D3D11_TEXTURE2D_DESC hdrd = {};
 		hdrd.Width = width;
@@ -277,9 +213,9 @@ namespace EnvironmentalEngine{
 		hdrd.Usage = D3D11_USAGE_DEFAULT;
 		hdrd.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 
-		Check(m_device->CreateTexture2D(&hdrd, nullptr, &m_hdrTex));
-		Check(m_device->CreateShaderResourceView(m_hdrTex.Get(), nullptr, &m_hdrSrv));
-		Check(m_device->CreateRenderTargetView(m_hdrTex.Get(), nullptr, &m_hdrRtv));
+		Check(graphicsDevice.Device()->CreateTexture2D(&hdrd, nullptr, &m_hdrTex));
+		Check(graphicsDevice.Device()->CreateShaderResourceView(m_hdrTex.Get(), nullptr, &m_hdrSrv));
+		Check(graphicsDevice.Device()->CreateRenderTargetView(m_hdrTex.Get(), nullptr, &m_hdrRtv));
 
 		D3D11_TEXTURE2D_DESC dd = {};
 		dd.Width = width;
@@ -308,10 +244,10 @@ namespace EnvironmentalEngine{
 		srv.Texture2D.MostDetailedMip = 0;
 		srv.Texture2D.MipLevels = 1;
 
-		Check(m_device->CreateTexture2D(&dd, nullptr, &m_depthTex));
-		Check(m_device->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
-		Check(m_device->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
-		Check(m_device->CreateDepthStencilState(&dsd, &m_depthState));
+		Check(graphicsDevice.Device()->CreateTexture2D(&dd, nullptr, &m_depthTex));
+		Check(graphicsDevice.Device()->CreateDepthStencilView(m_depthTex.Get(), &dsv, &m_depthView));
+		Check(graphicsDevice.Device()->CreateShaderResourceView(m_depthTex.Get(), &srv, &m_depthSrv));
+		Check(graphicsDevice.Device()->CreateDepthStencilState(&dsd, &m_depthState));
 
 		// Create shadow texture
 		D3D11_TEXTURE2D_DESC std = {};
@@ -325,23 +261,23 @@ namespace EnvironmentalEngine{
 		std.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 
 		// Since the shadow texture does the same thing as the depth texture, we can reuse the other thingies. Hopefully. I'm not sure.
-		Check(m_device->CreateTexture2D(&std, nullptr, &m_shadowTex));
-		Check(m_device->CreateDepthStencilView(m_shadowTex.Get(), &dsv, &m_shadowView));
-		Check(m_device->CreateShaderResourceView(m_shadowTex.Get(), &srv, &m_shadowSrv));
-		Check(m_device->CreateDepthStencilState(&dsd, &m_shadowState));
+		Check(graphicsDevice.Device()->CreateTexture2D(&std, nullptr, &m_shadowTex));
+		Check(graphicsDevice.Device()->CreateDepthStencilView(m_shadowTex.Get(), &dsv, &m_shadowView));
+		Check(graphicsDevice.Device()->CreateShaderResourceView(m_shadowTex.Get(), &srv, &m_shadowSrv));
+		Check(graphicsDevice.Device()->CreateDepthStencilState(&dsd, &m_shadowState));
         
 		CreateCube();
 	
 
 		m_planet = std::make_unique<PlanetRenderer>(
-			m_device.Get(), XMFLOAT3{ 0.0f, -100000.0f, 0.0f }, 100000.0f
+			graphicsDevice.Device(), XMFLOAT3{ 0.0f, -100000.0f, 0.0f }, 100000.0f
 			);
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
 		ImGui_ImplWin32_Init(hwnd);
-		ImGui_ImplDX11_Init(m_device.Get(), m_context.Get());
+		ImGui_ImplDX11_Init(graphicsDevice.Device(), graphicsDevice.Context());
 
 		D3D11_BLEND_DESC bd = {};
 		bd.RenderTarget[0].BlendEnable = TRUE;
@@ -353,14 +289,14 @@ namespace EnvironmentalEngine{
 		bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 		bd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-		Check(m_device->CreateBlendState(&bd, &m_additiveBlend));
+		Check(graphicsDevice.Device()->CreateBlendState(&bd, &m_additiveBlend));
 
 		D3D11_BUFFER_DESC tbd = {};
 		tbd.ByteWidth = sizeof(tonemapConstants);
 		tbd.Usage = D3D11_USAGE_DYNAMIC;
 		tbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		tbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		Check(m_device->CreateBuffer(&tbd, nullptr, &m_tonemapBuffer));
+		Check(graphicsDevice.Device()->CreateBuffer(&tbd, nullptr, &m_tonemapBuffer));
 	}
 
 	Renderer::~Renderer()
@@ -375,17 +311,15 @@ namespace EnvironmentalEngine{
 
 		m_lightDir = dl.direction;
 
-		if ((width != old_width || height != old_height) && width != 0 && height != 0) {
+		if ((width != graphicsDevice.Width() || height != graphicsDevice.Height()) && width != 0 && height != 0) {
 			Resize(width, height);
-			old_width = width;
-			old_height = height;
 		}
 
 		const float clear[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		m_context->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), m_depthView.Get());
-		m_context->ClearRenderTargetView(m_hdrRtv.Get(), clear);
-		m_context->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 0.0f, 0);
-		m_context->OMSetDepthStencilState(m_depthState.Get(), 0);
+		graphicsDevice.Context()->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), m_depthView.Get());
+		graphicsDevice.Context()->ClearRenderTargetView(m_hdrRtv.Get(), clear);
+		graphicsDevice.Context()->ClearDepthStencilView(m_depthView.Get(), D3D11_CLEAR_DEPTH, 0.0f, 0);
+		graphicsDevice.Context()->OMSetDepthStencilState(m_depthState.Get(), 0);
 
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
@@ -399,7 +333,7 @@ namespace EnvironmentalEngine{
 		m_viewMatrix = view;
 		m_projMatrix = XMMatrixPerspectiveFovLH(
 			XMConvertToRadians(m_fov),
-			aspect_ratio,
+			graphicsDevice.AspectRatio(),
 			500000.0f,
 			1.0f);
 
@@ -421,21 +355,21 @@ namespace EnvironmentalEngine{
 		XMStoreFloat(&frameConstants.pIntensity, XMVectorSet(pl.intensity, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_perFrameBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		graphicsDevice.Context()->Map(m_perFrameBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &frameConstants, sizeof(frameConstants));
-		m_context->Unmap(m_perFrameBuffer.Get(), 0);
+		graphicsDevice.Context()->Unmap(m_perFrameBuffer.Get(), 0);
 
-		m_context->VSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
-		m_context->PSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
-		m_context->VSSetConstantBuffers(1, 1, m_perObjectBuffer.GetAddressOf());
-		m_context->PSSetConstantBuffers(1, 1, m_perObjectBuffer.GetAddressOf());
+		graphicsDevice.Context()->VSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
+		graphicsDevice.Context()->PSSetConstantBuffers(0, 1, m_perFrameBuffer.GetAddressOf());
+		graphicsDevice.Context()->VSSetConstantBuffers(1, 1, m_perObjectBuffer.GetAddressOf());
+		graphicsDevice.Context()->PSSetConstantBuffers(1, 1, m_perObjectBuffer.GetAddressOf());
 
-		m_context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
-		m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+		graphicsDevice.Context()->VSSetShader(m_vertexShader.Get(), nullptr, 0);
+		graphicsDevice.Context()->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
-		m_context->IASetInputLayout(m_inputLayout.Get());
+		graphicsDevice.Context()->IASetInputLayout(m_inputLayout.Get());
 
-		m_planet->Update(m_device.Get(), camPos);
+		m_planet->Update(graphicsDevice.Device(), camPos);
 	}
 
 	void Renderer::Draw(const MeshRenderer& mr, const Transform& tr) 
@@ -459,12 +393,12 @@ namespace EnvironmentalEngine{
 		XMStoreFloat(&constants.smoothness, XMVectorSet(mr.smoothness, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		graphicsDevice.Context()->Map(m_perObjectBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &constants, sizeof(constants));
-		m_context->Unmap(m_perObjectBuffer.Get(), 0);
+		graphicsDevice.Context()->Unmap(m_perObjectBuffer.Get(), 0);
 
-		mr.mesh->Bind(m_context.Get());
-		m_context->DrawIndexed(mr.mesh->IndexCount(), 0, 0);
+		mr.mesh->Bind(graphicsDevice.Context());
+		graphicsDevice.Context()->DrawIndexed(mr.mesh->IndexCount(), 0, 0);
 	}
 
 	void Renderer::DrawNode(ID3D11DeviceContext* ctx, const node& n) {
@@ -506,28 +440,28 @@ namespace EnvironmentalEngine{
 		XMStoreFloat(&constants.ElevationTemperatureScale, XMVectorSet(elevationTemperatureScale, 0.0f, 0.0f, 0.0f));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_perPlanetBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		graphicsDevice.Context()->Map(m_perPlanetBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &constants, sizeof(constants));
-		m_context->Unmap(m_perPlanetBuffer.Get(), 0);
+		graphicsDevice.Context()->Unmap(m_perPlanetBuffer.Get(), 0);
 
-		//m_context->RSSetState(m_wireframe.Get());
-		if (!m_shadowPass) m_context->VSSetShader(m_terrainVS.Get(), nullptr, 0);
-		m_context->VSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
-		if (!m_shadowPass) m_context->PSSetShader(m_terrainPS.Get(), nullptr, 0);
-		m_context->PSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
-		m_context->IASetInputLayout(m_terrainInputLayout.Get());
+		//graphicsDevice.Context()->RSSetState(m_wireframe.Get());
+		if (!m_shadowPass) graphicsDevice.Context()->VSSetShader(m_terrainVS.Get(), nullptr, 0);
+		graphicsDevice.Context()->VSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
+		if (!m_shadowPass) graphicsDevice.Context()->PSSetShader(m_terrainPS.Get(), nullptr, 0);
+		graphicsDevice.Context()->PSSetConstantBuffers(1, 1, m_perPlanetBuffer.GetAddressOf());
+		graphicsDevice.Context()->IASetInputLayout(m_terrainInputLayout.Get());
 
-		m_context->PSSetShaderResources(0, 1, m_biomeSrv.GetAddressOf());  
-		m_context->PSSetSamplers(0, 1, m_biomeSampler.GetAddressOf());   
+		graphicsDevice.Context()->PSSetShaderResources(0, 1, m_biomeSrv.GetAddressOf());
+		graphicsDevice.Context()->PSSetSamplers(0, 1, m_biomeSampler.GetAddressOf());
 
-		m_context->PSSetShaderResources(1, 1, m_biomeIdSrv.GetAddressOf());
-		m_context->PSSetSamplers(1, 1, m_biomeIdSampler.GetAddressOf());
+		graphicsDevice.Context()->PSSetShaderResources(1, 1, m_biomeIdSrv.GetAddressOf());
+		graphicsDevice.Context()->PSSetSamplers(1, 1, m_biomeIdSampler.GetAddressOf());
 
 		for (auto& n : m_planet->roots) {
-			DrawNode(m_context.Get(), *n);
+			DrawNode(graphicsDevice.Context(), *n);
 		}
 
-		//m_context->RSSetState(nullptr);
+		//graphicsDevice.Context()->RSSetState(nullptr);
 	}
 
 	XMMATRIX Renderer::BuildLightMatrix(XMFLOAT3 focus, float extent, float depth) 
@@ -556,7 +490,7 @@ namespace EnvironmentalEngine{
 
 
 		ID3D11ShaderResourceView* nullsrv = nullptr;
-		m_context->PSSetShaderResources(2, 1, &nullsrv);
+		graphicsDevice.Context()->PSSetShaderResources(2, 1, &nullsrv);
 
 		XMMATRIX lightMatrix = BuildLightMatrix(focus, 20000.0f, 20000.0f + 2 * m_planet->radius * 0.05f);
 
@@ -564,23 +498,23 @@ namespace EnvironmentalEngine{
 		XMStoreFloat4x4(&co.transform, XMMatrixTranspose(lightMatrix));
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_shadowBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		graphicsDevice.Context()->Map(m_shadowBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &co, sizeof(co));
-		m_context->Unmap(m_shadowBuffer.Get(), 0);
+		graphicsDevice.Context()->Unmap(m_shadowBuffer.Get(), 0);
 
 		m_savedProjMatrix = m_projMatrix;
 		m_savedViewMatrix = m_viewMatrix;
 		m_projMatrix = XMMatrixIdentity();
 		m_viewMatrix = lightMatrix;
 
-		m_context->RSSetViewports(1, &m_shadowViewport);
-		m_context->OMSetRenderTargets(0, nullptr, m_shadowView.Get());
-		m_context->ClearDepthStencilView(m_shadowView.Get(), D3D11_CLEAR_DEPTH, 0.0f, 0);
-		m_context->OMSetDepthStencilState(m_shadowState.Get(), 0);
+		graphicsDevice.Context()->RSSetViewports(1, &m_shadowViewport);
+		graphicsDevice.Context()->OMSetRenderTargets(0, nullptr, m_shadowView.Get());
+		graphicsDevice.Context()->ClearDepthStencilView(m_shadowView.Get(), D3D11_CLEAR_DEPTH, 0.0f, 0);
+		graphicsDevice.Context()->OMSetDepthStencilState(m_shadowState.Get(), 0);
 
-		m_context->VSSetShader(m_shadowVS.Get(), nullptr, 0);
-		m_context->PSSetShader(nullptr, nullptr, 0);
-		m_context->IASetInputLayout(m_inputLayout.Get());
+		graphicsDevice.Context()->VSSetShader(m_shadowVS.Get(), nullptr, 0);
+		graphicsDevice.Context()->PSSetShader(nullptr, nullptr, 0);
+		graphicsDevice.Context()->IASetInputLayout(m_inputLayout.Get());
 
 	}
 
@@ -589,14 +523,14 @@ namespace EnvironmentalEngine{
 		m_viewMatrix = m_savedViewMatrix;
 		m_projMatrix = m_savedProjMatrix;
 
-		m_context->RSSetViewports(1, &m_viewport);
-		m_context->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), m_depthView.Get());
-		m_context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
-		m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+		graphicsDevice.Context()->RSSetViewports(1, &graphicsDevice.BackBufferViewPort());
+		graphicsDevice.Context()->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), m_depthView.Get());
+		graphicsDevice.Context()->VSSetShader(m_vertexShader.Get(), nullptr, 0);
+		graphicsDevice.Context()->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
-		m_context->PSSetConstantBuffers(2, 1, m_shadowBuffer.GetAddressOf());
-		m_context->PSSetShaderResources(2, 1, m_shadowSrv.GetAddressOf());
-		m_context->PSSetSamplers(2, 1, m_shadowSampler.GetAddressOf());	
+		graphicsDevice.Context()->PSSetConstantBuffers(2, 1, m_shadowBuffer.GetAddressOf());
+		graphicsDevice.Context()->PSSetShaderResources(2, 1, m_shadowSrv.GetAddressOf());
+		graphicsDevice.Context()->PSSetSamplers(2, 1, m_shadowSampler.GetAddressOf());
 	}
 
 	void Renderer::EndFrame() 
@@ -614,30 +548,30 @@ namespace EnvironmentalEngine{
 
 		
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_tonemapBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		graphicsDevice.Context()->Map(m_tonemapBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &consts, sizeof(consts));
-		m_context->Unmap(m_tonemapBuffer.Get(), 0);
+		graphicsDevice.Context()->Unmap(m_tonemapBuffer.Get(), 0);
 
-		m_context->VSSetConstantBuffers(0, 1, m_tonemapBuffer.GetAddressOf());
-		m_context->PSSetConstantBuffers(0, 1, m_tonemapBuffer.GetAddressOf());
+		graphicsDevice.Context()->VSSetConstantBuffers(0, 1, m_tonemapBuffer.GetAddressOf());
+		graphicsDevice.Context()->PSSetConstantBuffers(0, 1, m_tonemapBuffer.GetAddressOf());
 
-		m_context->OMSetRenderTargets(1, m_rtv.GetAddressOf(), nullptr);
+		graphicsDevice.Context()->OMSetRenderTargets(1, graphicsDevice.BackBufferRTVAddress(), nullptr);
 
-		m_context->PSSetShaderResources(0, 1, m_hdrSrv.GetAddressOf());
+		graphicsDevice.Context()->PSSetShaderResources(0, 1, m_hdrSrv.GetAddressOf());
 
-		m_context->VSSetShader(m_tonemapVS.Get(), nullptr, 0);
-		m_context->PSSetShader(m_tonemapPS.Get(), nullptr, 0);
-		m_context->IASetInputLayout(nullptr);
-		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		m_context->Draw(3, 0);
+		graphicsDevice.Context()->VSSetShader(m_tonemapVS.Get(), nullptr, 0);
+		graphicsDevice.Context()->PSSetShader(m_tonemapPS.Get(), nullptr, 0);
+		graphicsDevice.Context()->IASetInputLayout(nullptr);
+		graphicsDevice.Context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		graphicsDevice.Context()->Draw(3, 0);
 		ID3D11ShaderResourceView* nullsrv = nullptr;
-		m_context->PSSetShaderResources(0, 1, &nullsrv);
+		graphicsDevice.Context()->PSSetShaderResources(0, 1, &nullsrv);
 
 
 		ImGui::End();
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-		m_swapChain->Present(1, 0);
+		graphicsDevice.Present(true);
 	}
 
 	void Renderer::CreateCube()
@@ -680,7 +614,7 @@ namespace EnvironmentalEngine{
 			10, 19,  7,		10, 22, 19,
 		};
 
-		m_cubeMesh = std::make_unique<Mesh>(m_device.Get(), vertices, sizeof(vertices) / sizeof(vertices[0]), sizeof(Vertex), indices, sizeof(indices) / sizeof(indices[0]));
+		m_cubeMesh = std::make_unique<Mesh>(graphicsDevice.Device(), vertices, sizeof(vertices) / sizeof(vertices[0]), sizeof(Vertex), indices, sizeof(indices) / sizeof(indices[0]));
 
 		std::vector<Vertex> sVertices;
 		std::vector<UINT> sIndices;
@@ -710,7 +644,7 @@ namespace EnvironmentalEngine{
 			}
 		}
 
-		m_sphereMesh = std::make_unique<Mesh>(m_device.Get(), sVertices.data(), (UINT)sVertices.size(), sizeof(Vertex), sIndices.data(), (UINT)sIndices.size());
+		m_sphereMesh = std::make_unique<Mesh>(graphicsDevice.Device(), sVertices.data(), (UINT)sVertices.size(), sizeof(Vertex), sIndices.data(), (UINT)sIndices.size());
 
 		D3D11_BUFFER_DESC cbd = {};
 		cbd.ByteWidth = sizeof(PerFrameConstants);
@@ -718,35 +652,35 @@ namespace EnvironmentalEngine{
 		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-		Check(m_device->CreateBuffer(&cbd, nullptr, &m_perFrameBuffer));
+		Check(graphicsDevice.Device()->CreateBuffer(&cbd, nullptr, &m_perFrameBuffer));
 
 		cbd.ByteWidth = sizeof(PerObjectConstants);
 		
-		Check(m_device->CreateBuffer(&cbd, nullptr, &m_perObjectBuffer));
+		Check(graphicsDevice.Device()->CreateBuffer(&cbd, nullptr, &m_perObjectBuffer));
 
 		cbd.ByteWidth = sizeof(PerPlanetConstants);
 
-		Check(m_device->CreateBuffer(&cbd, nullptr, &m_perPlanetBuffer));
+		Check(graphicsDevice.Device()->CreateBuffer(&cbd, nullptr, &m_perPlanetBuffer));
 
 		cbd.ByteWidth = sizeof(atmosphereConstants);
 
-		Check(m_device->CreateBuffer(&cbd, nullptr, &m_atmosphereBuffer));
+		Check(graphicsDevice.Device()->CreateBuffer(&cbd, nullptr, &m_atmosphereBuffer));
 
 		cbd.ByteWidth = sizeof(shadowConstants);
 
-		Check(m_device->CreateBuffer(&cbd, nullptr, &m_shadowBuffer));
+		Check(graphicsDevice.Device()->CreateBuffer(&cbd, nullptr, &m_shadowBuffer));
 
 		std::wstring shaderPath = ExeDir() + L"Triangle.hlsl";
 
 		auto vsBlob = LoadShaderByteCode((shaderPath).c_str(), "VSMain", "vs_5_0");
 		auto psBlob = LoadShaderByteCode((shaderPath).c_str(), "PSMain", "ps_5_0");
 
-		Check(m_device->CreateVertexShader(
+		Check(graphicsDevice.Device()->CreateVertexShader(
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			nullptr, &m_vertexShader
 		));
 		
-		Check(m_device->CreatePixelShader(
+		Check(graphicsDevice.Device()->CreatePixelShader(
 			psBlob->GetBufferPointer(), psBlob->GetBufferSize(),
 			nullptr, &m_pixelShader
 		));
@@ -756,7 +690,7 @@ namespace EnvironmentalEngine{
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 			
-		Check(m_device->CreateInputLayout(
+		Check(graphicsDevice.Device()->CreateInputLayout(
 			layout, 2,
 			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
 			&m_inputLayout
@@ -769,12 +703,12 @@ namespace EnvironmentalEngine{
 		auto aps = LoadShaderByteCode(atmoPath.c_str(), "PSMain", "ps_5_0");
 
 
-		Check(m_device->CreateVertexShader(
+		Check(graphicsDevice.Device()->CreateVertexShader(
 			avs->GetBufferPointer(), avs->GetBufferSize(),
 			nullptr, &m_atmoVS
 		));
 
-		Check(m_device->CreatePixelShader(
+		Check(graphicsDevice.Device()->CreatePixelShader(
 			aps->GetBufferPointer(), aps->GetBufferSize(),
 			nullptr, &m_atmoPS
 
@@ -785,12 +719,12 @@ namespace EnvironmentalEngine{
 		auto tmvs = LoadShaderByteCode(tonemapPath.c_str(), "VSMain", "vs_5_0");
 		auto tmps = LoadShaderByteCode(tonemapPath.c_str(), "PSMain", "ps_5_0");
 
-		Check(m_device->CreateVertexShader(
+		Check(graphicsDevice.Device()->CreateVertexShader(
 			tmvs->GetBufferPointer(), tmvs->GetBufferSize(),
 			nullptr, &m_tonemapVS
 		));
 
-		Check(m_device->CreatePixelShader(
+		Check(graphicsDevice.Device()->CreatePixelShader(
 			tmps->GetBufferPointer(), tmps->GetBufferSize(),
 			nullptr, &m_tonemapPS
 		));
@@ -799,12 +733,12 @@ namespace EnvironmentalEngine{
 		auto tvs = LoadShaderByteCode(terrainPath.c_str(), "VSMain", "vs_5_0");
 		auto tps = LoadShaderByteCode(terrainPath.c_str(), "PSMain", "ps_5_0");
 
-		Check(m_device->CreateVertexShader(
+		Check(graphicsDevice.Device()->CreateVertexShader(
 			tvs->GetBufferPointer(), tvs->GetBufferSize(),
 			nullptr, &m_terrainVS
 		));
 
-		Check(m_device->CreatePixelShader(
+		Check(graphicsDevice.Device()->CreatePixelShader(
 			tps->GetBufferPointer(), tps->GetBufferSize(),
 			nullptr, &m_terrainPS
 		));
@@ -812,7 +746,7 @@ namespace EnvironmentalEngine{
 		std::wstring shadowPath = ExeDir() + L"Shadow.hlsl";
 		auto svs = LoadShaderByteCode(shadowPath.c_str(), "VSMain", "vs_5_0");
 
-		Check(m_device->CreateVertexShader(
+		Check(graphicsDevice.Device()->CreateVertexShader(
 			svs->GetBufferPointer(), svs->GetBufferSize(),
 			nullptr, &m_shadowVS
 		));
@@ -825,7 +759,7 @@ namespace EnvironmentalEngine{
 			{"PERCIPITATION", 0, DXGI_FORMAT_R32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 
-		Check(m_device->CreateInputLayout(
+		Check(graphicsDevice.Device()->CreateInputLayout(
 			terrainLayout, 5,
 			tvs->GetBufferPointer(), tvs->GetBufferSize(),
 			&m_terrainInputLayout
@@ -855,15 +789,15 @@ namespace EnvironmentalEngine{
 		sd.SysMemPitch = w * 4;
 
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> biomeTex = {};
-		Check(m_device->CreateTexture2D(&td, &sd, &biomeTex));
-		Check(m_device->CreateShaderResourceView(biomeTex.Get(), nullptr, &m_biomeSrv));
+		Check(graphicsDevice.Device()->CreateTexture2D(&td, &sd, &biomeTex));
+		Check(graphicsDevice.Device()->CreateShaderResourceView(biomeTex.Get(), nullptr, &m_biomeSrv));
 		stbi_image_free(px);
 
 		D3D11_SAMPLER_DESC smp = {};
 		smp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		smp.AddressU = smp.AddressV = smp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		smp.MaxLOD = D3D11_FLOAT32_MAX;
-		Check(m_device->CreateSamplerState(&smp, &m_biomeSampler));
+		Check(graphicsDevice.Device()->CreateSamplerState(&smp, &m_biomeSampler));
 
 		td = {};
 		sd = {};
@@ -890,19 +824,19 @@ namespace EnvironmentalEngine{
 		sd.SysMemPitch = w;
 
 		Microsoft::WRL::ComPtr<ID3D11Texture2D> biomeIdTex = {};
-		Check(m_device->CreateTexture2D(&td, &sd, &biomeIdTex));
-		Check(m_device->CreateShaderResourceView(biomeIdTex.Get(), nullptr, &m_biomeIdSrv));
+		Check(graphicsDevice.Device()->CreateTexture2D(&td, &sd, &biomeIdTex));
+		Check(graphicsDevice.Device()->CreateShaderResourceView(biomeIdTex.Get(), nullptr, &m_biomeIdSrv));
 		stbi_image_free(px);
 
 		smp.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		smp.AddressU = smp.AddressV = smp.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		smp.MaxLOD = D3D11_FLOAT32_MAX;
-		Check(m_device->CreateSamplerState(&smp, &m_biomeIdSampler));
+		Check(graphicsDevice.Device()->CreateSamplerState(&smp, &m_biomeIdSampler));
 
 		D3D11_RASTERIZER_DESC rd = {};
 		rd.FillMode = D3D11_FILL_WIREFRAME;
 		rd.CullMode = D3D11_CULL_NONE;
-		m_device->CreateRasterizerState(&rd, &m_wireframe);
+		graphicsDevice.Device()->CreateRasterizerState(&rd, &m_wireframe);
     }
 
 
@@ -942,36 +876,36 @@ namespace EnvironmentalEngine{
 
 
 		D3D11_MAPPED_SUBRESOURCE mapped = {};
-		m_context->Map(m_atmosphereBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		graphicsDevice.Context()->Map(m_atmosphereBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 		memcpy(mapped.pData, &ac, sizeof(ac));
-		m_context->Unmap(m_atmosphereBuffer.Get(), 0);
+		graphicsDevice.Context()->Unmap(m_atmosphereBuffer.Get(), 0);
 
-		m_context->VSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
-		m_context->PSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
-		m_context->PSSetConstantBuffers(2, 1, m_shadowBuffer.GetAddressOf());
+		graphicsDevice.Context()->VSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
+		graphicsDevice.Context()->PSSetConstantBuffers(0, 1, m_atmosphereBuffer.GetAddressOf());
+		graphicsDevice.Context()->PSSetConstantBuffers(2, 1, m_shadowBuffer.GetAddressOf());
 
 
-		m_context->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), nullptr);
-		m_context->VSSetShader(m_atmoVS.Get(), nullptr, 0);
-		m_context->PSSetShader(m_atmoPS.Get(), nullptr, 0);
-		m_context->IASetInputLayout(nullptr);
+		graphicsDevice.Context()->OMSetRenderTargets(1, m_hdrRtv.GetAddressOf(), nullptr);
+		graphicsDevice.Context()->VSSetShader(m_atmoVS.Get(), nullptr, 0);
+		graphicsDevice.Context()->PSSetShader(m_atmoPS.Get(), nullptr, 0);
+		graphicsDevice.Context()->IASetInputLayout(nullptr);
 		ID3D11Buffer* nullVB = nullptr; UINT s = 0, o = 0;
-		m_context->IASetVertexBuffers(0, 1, &nullVB, &s, &o);
-		m_context->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		graphicsDevice.Context()->IASetVertexBuffers(0, 1, &nullVB, &s, &o);
+		graphicsDevice.Context()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		m_context->PSSetShaderResources(0, 1, m_depthSrv.GetAddressOf());
-		m_context->PSSetShaderResources(2, 1, m_shadowSrv.GetAddressOf());
-		m_context->PSSetSamplers(2, 1, m_shadowSampler.GetAddressOf());
+		graphicsDevice.Context()->PSSetShaderResources(0, 1, m_depthSrv.GetAddressOf());
+		graphicsDevice.Context()->PSSetShaderResources(2, 1, m_shadowSrv.GetAddressOf());
+		graphicsDevice.Context()->PSSetSamplers(2, 1, m_shadowSampler.GetAddressOf());
 
 		float bf[4] = { 0, 0, 0, 0 };
-		m_context->OMSetBlendState(m_additiveBlend.Get(), bf, 0xffffffff);
+		graphicsDevice.Context()->OMSetBlendState(m_additiveBlend.Get(), bf, 0xffffffff);
 
-		m_context->Draw(3, 0);
+		graphicsDevice.Context()->Draw(3, 0);
 
 		ID3D11ShaderResourceView* nsrv = nullptr;
-		m_context->PSSetShaderResources(0, 1, &nsrv);
+		graphicsDevice.Context()->PSSetShaderResources(0, 1, &nsrv);
 
-		m_context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+		graphicsDevice.Context()->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 	}
 }
 
